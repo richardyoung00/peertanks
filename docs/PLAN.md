@@ -75,30 +75,36 @@ tools/
 ## 3. Networking
 
 **Joining**
-- The host's PeerJS ID is `tanks-<CODE>`, where CODE is 6 characters with no ambiguous letters (e.g. no O/0).
+- The host's PeerJS ID is `tanks-game-v1-<CODE>`, where CODE is 6 characters with no ambiguous letters (e.g. no O/0).
 - The share link is `https://<user>.github.io/tanks-game/#join=<CODE>`. It uses a hash so GitHub Pages doesn't need routing rules.
 - Visiting a join link pre-fills the code. The player just enters a name, which is saved in `localStorage`.
 
 **Data flow**
-- Clients send **inputs** to the host 30 times a second: keys pressed, aim angle, aim distance, fire, weapon choice, and a sequence number.
+- Clients send **inputs** to the host every tick (60 times a second): keys pressed, aim angle, aim distance, fire and a sequence number. Each packet repeats the last 3 inputs in case one is lost.
+- **Two channels per player:** PeerJS's reliable channel carries the welcome, players joining/leaving, events and pings. A second "fast" channel that we open ourselves never resends lost packets, and carries inputs and snapshots. This replaced the `reliable: false` concern below.
 - The host runs the game **60 times a second** and sends **snapshots** 20 times a second. A snapshot holds tanks, projectiles, pickups and the round timer.
 - One-off **events** (kill, pickup, explosion, round start/end, player join/leave) are sent reliably.
-- Snapshots are compact binary (`ArrayBuffer`). Rare events use JSON. Rough cost: about 300 bytes per snapshot, so about 6 KB/s per client. With 7 clients the host uploads about 45 KB/s, which home connections handle easily.
+- Snapshots are compact binary (`ArrayBuffer`) using fixed-point numbers: 13 bytes per tank and 10 per projectile. Rare events use JSON. Rough cost: about 300 bytes per snapshot, so about 6 KB/s per client. With 7 clients the host uploads about 45 KB/s, which home connections handle easily.
+- The host sends the whole map in the welcome message, so players can join games on custom maps they don't have.
+- **Disconnects:** closing the tab shuts down the connection properly. Otherwise a player silent for 5 s is dropped by the host, and a client that gets no snapshots for 5 s shows "lost connection".
+- **Background tabs:** a small worker keeps the simulation ticking when the tab is hidden, so the game doesn't freeze if the host switches tabs. A client that goes quiet is treated as idle after 0.25 s, so its tank stops driving.
 
 **Smoothness**
 - **Own tank:** moves instantly (prediction). When a snapshot arrives, the client replays any inputs the host hasn't processed yet.
 - **Other tanks:** drawn ~100 ms behind real time and blended smoothly between snapshots.
-- **Own shots:** appear immediately as client-side effects. The host decides whether they hit.
+- **Own shots:** recoil and muzzle flash are instant. The shell itself comes from snapshots, so on a laggy connection it appears a little behind a moving tank. **To do (M4/M5):** draw a predicted shell straight away and hand over to the real one when it arrives.
+- **Events** (hits, shots) are played in time with the delayed view of other players, so puffs line up with the shells.
 - **Ping:** measured every second and shown in the HUD and scoreboard.
 
 **NAT / connection problems**
 - STUN servers are listed in `config.ts`. TURN servers can be added there (e.g. Metered Open Relay free tier, 20 GB/month). TURN credentials would be visible in the shipped code.
 - If a connection fails or times out, the player sees a clear message suggesting what to try.
-- **To verify early:** PeerJS's `reliable: false` only turns off ordering, not retransmission. If that causes lag spikes, we either open the data channel ourselves (keeping PeerJS for connecting players) or switch to Trystero, a library that connects players without a server. The networking code sits behind an interface so this swap is contained.
+- ~~**To verify early:** PeerJS's `reliable: false` only turns off ordering, not retransmission.~~ Confirmed, and solved with the fast channel above. Trystero stays the fallback if the PeerJS public signalling server becomes unreliable.
+- PeerJS's free public TURN servers are included by default.
 
 ## 4. Simulation
 
-- **Movement:** the arrow keys (and WASD) move the tank relative to the screen. The camera never rotates, so screen directions are map directions. The hull turns to face the direction of travel. Tanks use Rapier's character controller so they slide along walls.
+- **Movement:** the arrow keys (and WASD) move the tank relative to the screen. The camera never rotates, so screen directions are map directions. The hull turns to face the direction of travel (front or back, whichever is closer). Tanks are Rapier dynamic bodies that steer by accelerating towards the pressed direction. They slide along walls, push each other, and can be knocked back.
 - **Aim:** the mouse position on screen is projected onto the ground, and the turret points at that spot. Its distance from the tank sets throw strength (grenades) and target distance (mortars).
 - **Terrain types**, set as tile properties in Tiled:
 
@@ -133,7 +139,18 @@ Mortars ignore all terrain until they land.
 | Grenade | Thrown, bounces off terrain, 2 s fuse | 100 inner / falloff | 3 |
 | Mortar | High arc to the cursor spot, flies over terrain, shadow shows the landing spot | 100 inner / falloff | 3 |
 
-- **Pickups** spawn at points placed in the map. A collected pickup comes back after a delay.
+- **Pickups:** weapons and powerups spawn randomly around the map (see the open question on how random). A collected pickup is replaced after a delay.
+
+### Powerups (starting values, to tune by playing)
+
+Powerups change your tank for a short time. An active powerup shows as a glow or icon on the tank, so other players can see it.
+
+| Powerup | Effect | Duration |
+|---|---|---|
+| Shield | Take 50% less damage | 20 s |
+| Speed | Move 40% faster | 10 s |
+| Damage boost | Deal 50% more damage | 10 s |
+| Dead man's switch | Explode on death, causing splash damage (like a rocket) | Until death or 30 s |
 - **Switching weapons:** keys 1–7 or the mouse wheel. Cannon is always slot 1.
 
 ### Rounds
@@ -204,7 +221,7 @@ Each milestone ends with something playable for you to check.
 1. **Scaffold + single player:** Vite/TS project, Rapier, map loading, 3D terrain, procedural tank, screen-relative movement, turret aim, cannon firing.
 2. **P2P:** host/join with codes and links, input → host → snapshots, prediction and interpolation, ping display.
 3. **Combat loop:** health, damage, death by hazards, respawn and invulnerability, scoring, 3-minute rounds, scoreboard, kill feed.
-4. **Weapons and pickups:** all 7 weapons, pickup spawns, weapon switching.
+4. **Weapons, powerups and pickups:** all 7 weapons, 4 powerups, random pickup spawns, weapon switching.
 5. **Polish:** effects, sound effects, announcer, menus, settings, GitHub Pages deploy.
 
 ## 11. Risks
@@ -220,3 +237,4 @@ Each milestone ends with something playable for you to check.
 2. ~~Weapon numbers and switching keys~~: OK as starting points.
 3. ~~First map~~: I design a small arena; themed arenas come later.
 4. ~~Spectating / minimap~~: no minimap; the camera holds still while dead.
+5. Random pickup spawning: anywhere on open floor, or random choice among spawn spots placed in the map?

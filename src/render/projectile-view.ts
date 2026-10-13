@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type { Projectile } from '../sim/projectiles';
 import { BARREL_HEIGHT } from './tank-model';
+import type { ProjectileViewState } from './view-state';
 
 const shellGeometry = new THREE.CapsuleGeometry(0.07, 0.14, 4, 8).rotateZ(Math.PI / 2);
 const shellMaterial = new THREE.MeshStandardMaterial({
@@ -15,15 +15,13 @@ export class ProjectileView {
   readonly object = new THREE.Group();
   private readonly meshes = new Map<number, THREE.Mesh>();
 
-  sync(projectiles: Projectile[], alpha: number): void {
+  sync(projectiles: ProjectileViewState[]): void {
     const alive = new Set<number>();
     for (const projectile of projectiles) {
       alive.add(projectile.id);
       const mesh = this.meshes.get(projectile.id) ?? this.createMesh(projectile.id);
-      const x = THREE.MathUtils.lerp(projectile.prevX, projectile.x, alpha);
-      const z = THREE.MathUtils.lerp(projectile.prevY, projectile.y, alpha);
-      mesh.position.set(x, BARREL_HEIGHT, z);
-      mesh.rotation.y = -Math.atan2(projectile.vy, projectile.vx);
+      mesh.position.set(projectile.x, BARREL_HEIGHT, projectile.y);
+      mesh.rotation.y = -projectile.angle;
     }
     this.removeMissing(alive);
   }

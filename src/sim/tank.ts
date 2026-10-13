@@ -20,10 +20,19 @@ export interface Tank {
   weaponCooldown: number;
 }
 
-export function createTank(world: RAPIER.World, id: string, name: string, color: number, spawn: MapPoint): Tank {
-  const body = world.createRigidBody(
-    RAPIER.RigidBodyDesc.dynamic().setTranslation(spawn.x, spawn.y).lockRotations().setLinearDamping(2),
-  );
+/** Kinematic tanks are moved directly rather than by physics; clients use them for other players' tanks. */
+export type TankBodyKind = 'dynamic' | 'kinematic';
+
+export function createTank(
+  world: RAPIER.World,
+  id: string,
+  name: string,
+  color: number,
+  spawn: MapPoint,
+  kind: TankBodyKind = 'dynamic',
+): Tank {
+  const bodyDesc = kind === 'dynamic' ? RAPIER.RigidBodyDesc.dynamic() : RAPIER.RigidBodyDesc.kinematicPositionBased();
+  const body = world.createRigidBody(bodyDesc.setTranslation(spawn.x, spawn.y).lockRotations().setLinearDamping(2));
   world.createCollider(
     RAPIER.ColliderDesc.ball(TANK.radius).setCollisionGroups(TANK_COLLISION_GROUPS).setFriction(0),
     body,

@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import type { GameEvent } from '../sim/game-events';
-import type { GameWorld } from '../sim/game-world';
-import { lerpAngle } from '../sim/angles';
+import type { GameMap } from '../sim/game-map';
 import { createAimReticle } from './aim-reticle';
 import { EffectsLayer } from './effects/effect';
 import { createImpactPuff } from './effects/impact-puff';
@@ -12,8 +11,9 @@ import { centreSunOn, createScene, type SceneParts } from './scene-setup';
 import { BARREL_HEIGHT, TankModel } from './tank-model';
 import { buildTerrainView, type TerrainView } from './terrain/terrain-view';
 import { getTheme } from './themes';
+import type { TankViewState, ViewState } from './view-state';
 
-/** Draws the game world. It only reads simulation state; it never changes it. */
+/** Draws the game. It only reads the view state it is given; it never changes the simulation. */
 export class GameView {
   private readonly parts: SceneParts;
   private readonly followCamera: FollowCamera;
@@ -26,17 +26,13 @@ export class GameView {
 
   constructor(
     private readonly container: HTMLElement,
-    private readonly world: GameWorld,
-    private readonly localTankId: string,
+    map: GameMap,
   ) {
-    const theme = getTheme(world.map.theme);
+    const theme = getTheme(map.theme);
     this.parts = createScene(container, theme);
     this.followCamera = new FollowCamera(container.clientWidth / container.clientHeight);
-    this.terrain = buildTerrainView(world.map, theme);
+    this.terrain = buildTerrainView(map, theme);
     this.parts.scene.add(this.terrain.object, this.projectileView.object, this.effects.object, this.reticle);
-
-    const localTank = world.tanks.get(localTankId);
-    if (localTank) this.followCamera.snapTo(localTank.x, localTank.y);
     window.addEventListener('resize', () => this.resize());
   }
 
@@ -44,42 +40,49 @@ export class GameView {
     return this.followCamera.groundPointAt(ndcX, ndcY);
   }
 
+  snapCamera(x: number, y: number): void {
+    this.followCamera.snapTo(x, y);
+  }
+
   handleEvents(events: GameEvent[]): void {
     for (const event of events) {
       switch (event.type) {
         case 'shotFired':
-          this.tankModels.get(event.tankId)?.kick();
-          this.effects.add(createMuzzleFlash(event.x, BARREL_HEIGHT, event.y, event.angle));
+          this.showShot(event.tankId, event.x, event.y, event.angle);
           break;
         case 'shellHit':
           this.effects.add(createImpactPuff(event.x, BARREL_HEIGHT, event.y));
-          break;
-        case 'tankRespawned':
-          this.snapCameraIfLocal(event.tankId);
           break;
       }
     }
   }
 
-  render(alpha: number, frameDt: number, aimPoint: THREE.Vector3 | null): void {
+  showShot(tankId: string, x: number, y: number, angle: number): void {
+    this.tankModels.get(tankId)?.kick();
+    this.effects.add(createMuzzleFlash(x, BARREL_HEIGHT, y, angle));
+  }
+
+  render(state: ViewState, frameDt: number, aimPoint: THREE.Vector3 | null): void {
     this.elapsed += frameDt;
-    this.syncTanks(alpha, frameDt);
-    this.projectileView.sync(this.world.projectiles, alpha);
+    this.syncTanks(state.tanks, frameDt);
+    this.projectileView.sync(state.projectiles);
     this.effects.update(frameDt);
     this.terrain.update(this.elapsed);
     this.updateReticle(aimPoint);
-    this.updateCamera(alpha, frameDt);
+    if (state.cameraFocus) this.followCamera.follow(state.cameraFocus.x, state.cameraFocus.y, frameDt);
+    centreSunOn(this.parts.sun, this.followCamera.focusX, this.followCamera.focusZ);
     this.parts.renderer.render(this.parts.scene, this.followCamera.camera);
   }
 
-  private syncTanks(alpha: number, frameDt: number): void {
-    for (const tank of this.world.tanks.values()) {
+  private syncTanks(tanks: TankViewState[], frameDt: number): void {
+    const present = new Set<string>();
+    for (const tank of tanks) {
+      present.add(tank.id);
       const model = this.tankModels.get(tank.id) ?? this.createTankModel(tank.id, tank.color);
-      const x = THREE.MathUtils.lerp(tank.prevX, tank.x, alpha);
-      const z = THREE.MathUtils.lerp(tank.prevY, tank.y, alpha);
-      model.setPose(x, z, lerpAngle(tank.prevHullAngle, tank.hullAngle, alpha), tank.aimAngle);
+      model.setPose(tank.x, tank.y, tank.hullAngle, tank.aimAngle);
       model.update(frameDt);
     }
+    this.removeMissingTanks(present);
   }
 
   private createTankModel(id: string, color: number): TankModel {
@@ -89,24 +92,17 @@ export class GameView {
     return model;
   }
 
-  private updateCamera(alpha: number, frameDt: number): void {
-    const tank = this.world.tanks.get(this.localTankId);
-    if (tank) {
-      const x = THREE.MathUtils.lerp(tank.prevX, tank.x, alpha);
-      const z = THREE.MathUtils.lerp(tank.prevY, tank.y, alpha);
-      this.followCamera.follow(x, z, frameDt);
+  private removeMissingTanks(present: Set<string>): void {
+    for (const [id, model] of this.tankModels) {
+      if (present.has(id)) continue;
+      this.parts.scene.remove(model.root);
+      this.tankModels.delete(id);
     }
-    centreSunOn(this.parts.sun, this.followCamera.focusX, this.followCamera.focusZ);
   }
 
   private updateReticle(aimPoint: THREE.Vector3 | null): void {
     this.reticle.visible = aimPoint !== null;
     if (aimPoint) this.reticle.position.set(aimPoint.x, 0.02, aimPoint.z);
-  }
-
-  private snapCameraIfLocal(tankId: string): void {
-    const tank = this.world.tanks.get(tankId);
-    if (tankId === this.localTankId && tank) this.followCamera.snapTo(tank.x, tank.y);
   }
 
   private resize(): void {

@@ -15,6 +15,7 @@ export class GameWorld implements WeaponContext {
   readonly physics: RAPIER.World;
   readonly tanks = new Map<string, Tank>();
   projectiles: Projectile[] = [];
+  tick = 0;
 
   private events: GameEvent[] = [];
   private nextProjectileId = 1;
@@ -32,6 +33,14 @@ export class GameWorld implements WeaponContext {
     return tank;
   }
 
+  removeTank(id: string): void {
+    const tank = this.tanks.get(id);
+    if (!tank) return;
+    this.tanksByColliderHandle.delete(tank.body.collider(0).handle);
+    this.physics.removeRigidBody(tank.body);
+    this.tanks.delete(id);
+  }
+
   /** Advances the world by one fixed tick and returns what happened during it. */
   step(inputs: ReadonlyMap<string, PlayerInput>): GameEvent[] {
     for (const tank of this.tanks.values()) {
@@ -46,6 +55,7 @@ export class GameWorld implements WeaponContext {
       this.respawnIfOnHazard(tank);
     }
     this.stepProjectiles();
+    this.tick++;
 
     const events = this.events;
     this.events = [];

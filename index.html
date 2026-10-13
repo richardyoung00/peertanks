@@ -8,10 +8,40 @@
   </head>
   <body>
     <div id="game"></div>
-    <div id="hud">
-      <div id="loading">Loading…</div>
+
+    <div id="hud" hidden>
+      <div id="invite-panel" class="panel" hidden>
+        <div class="panel-label">Invite friends</div>
+        <div class="invite-row">
+          <span id="invite-code" class="invite-code"></span>
+          <button id="invite-copy" type="button">Copy link</button>
+        </div>
+      </div>
+      <div id="status-panel" class="panel"></div>
       <div id="help">WASD / arrows to move · mouse to aim · click to fire</div>
     </div>
+
+    <form id="menu" class="screen" hidden>
+      <h1>Tanks</h1>
+      <label class="field">
+        <span>Your name</span>
+        <input id="menu-name" maxlength="16" autocomplete="nickname" required />
+      </label>
+      <button id="menu-host" type="button" class="primary">Host a game</button>
+      <div class="divider">or join one</div>
+      <div class="join-row">
+        <input id="menu-code" placeholder="Join code" maxlength="6" autocomplete="off" spellcheck="false" />
+        <button id="menu-join" type="submit">Join</button>
+      </div>
+    </form>
+
+    <div id="notice" class="screen" hidden>
+      <p id="notice-message"></p>
+      <button id="notice-action" type="button" class="primary"></button>
+    </div>
+
+    <div id="loading" class="screen">Loading…</div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -50,5 +50,15 @@ Game architecture
 - make sure the sprites, textures and other assets are all similar visually so that the visual theme of the game is consistent.
 - make sure the physics engine adds to the gameplay, the physics does not need to be completely realistic, but should be intuitive.
 
+
+Powerups
+- weapons and powerups should spawn randomly around the map 
+- powerups are things that temporarily modify the player for a short time, eg
+    - shield: reduced damage taken for 20 seconds
+    - speedup movement for a short time
+    - increased damage for a short time
+    - explode on death, causing splash damage
+
+
 Credits
 - Announcer voice lines generated with ElevenLabs (elevenlabs.io), free tier, non-commercial use.
