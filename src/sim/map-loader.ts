@@ -1,0 +1,139 @@
+import type { GameMap, MapPoint, PickupPoint } from './game-map';
+import { isTerrainType, type TerrainType } from './terrain';
+
+// The subset of the Tiled JSON format (https://doc.mapeditor.org/en/stable/reference/json-map-format/) we use.
+interface TiledProperty {
+  name: string;
+  value: unknown;
+}
+
+interface TiledTile {
+  id: number;
+  properties?: TiledProperty[];
+}
+
+interface TiledTileset {
+  firstgid: number;
+  source?: string;
+  tiles?: TiledTile[];
+}
+
+interface TiledObject {
+  type?: string;
+  x: number;
+  y: number;
+  properties?: TiledProperty[];
+}
+
+interface TiledLayer {
+  name: string;
+  type: 'tilelayer' | 'objectgroup' | string;
+  data?: number[];
+  encoding?: string;
+  objects?: TiledObject[];
+}
+
+interface TiledMap {
+  width: number;
+  height: number;
+  tilewidth: number;
+  tileheight: number;
+  layers: TiledLayer[];
+  tilesets: TiledTileset[];
+  properties?: TiledProperty[];
+}
+
+const TERRAIN_LAYER = 'terrain';
+const OBJECTS_LAYER = 'objects';
+const TILED_FLIP_FLAGS_MASK = 0x1fffffff;
+const MAX_MAP_SIZE = 100;
+
+export async function fetchMap(url: string): Promise<GameMap> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Could not load map ${url} (${response.status})`);
+  return parseTiledMap(await response.json());
+}
+
+export function parseTiledMap(tiled: TiledMap): GameMap {
+  validateSize(tiled);
+  const terrainByGid = buildTerrainLookup(tiled.tilesets);
+  const objects = findLayer(tiled, OBJECTS_LAYER, 'objectgroup').objects ?? [];
+
+  const map: GameMap = {
+    name: stringProperty(tiled.properties, 'name') ?? 'Untitled',
+    theme: stringProperty(tiled.properties, 'theme') ?? 'grassland',
+    width: tiled.width,
+    height: tiled.height,
+    terrain: readTerrain(tiled, terrainByGid),
+    spawns: readSpawns(tiled, objects),
+    pickups: readPickups(tiled, objects),
+  };
+
+  if (map.spawns.length === 0) throw new Error('Map has no spawn points');
+  return map;
+}
+
+function validateSize(tiled: TiledMap): void {
+  const tooBig = tiled.width > MAX_MAP_SIZE || tiled.height > MAX_MAP_SIZE;
+  if (tiled.width < 1 || tiled.height < 1 || tooBig) {
+    throw new Error(`Map size ${tiled.width}x${tiled.height} is outside the allowed range`);
+  }
+}
+
+function buildTerrainLookup(tilesets: TiledTileset[]): Map<number, TerrainType> {
+  const terrainByGid = new Map<number, TerrainType>();
+  for (const tileset of tilesets) {
+    if (tileset.source) throw new Error('External tilesets are not supported; embed the tileset in the map');
+    for (const tile of tileset.tiles ?? []) {
+      const terrain = stringProperty(tile.properties, 'terrain');
+      if (!isTerrainType(terrain)) throw new Error(`Tile ${tile.id} has unknown terrain "${terrain}"`);
+      terrainByGid.set(tileset.firstgid + tile.id, terrain);
+    }
+  }
+  return terrainByGid;
+}
+
+function readTerrain(tiled: TiledMap, terrainByGid: Map<number, TerrainType>): TerrainType[] {
+  const layer = findLayer(tiled, TERRAIN_LAYER, 'tilelayer');
+  if (layer.encoding && layer.encoding !== 'csv') {
+    throw new Error('Terrain layer must use CSV encoding');
+  }
+  const data = layer.data ?? [];
+  if (data.length !== tiled.width * tiled.height) throw new Error('Terrain layer size does not match map size');
+
+  return data.map((rawGid) => {
+    const gid = rawGid & TILED_FLIP_FLAGS_MASK;
+    if (gid === 0) return 'floor';
+    const terrain = terrainByGid.get(gid);
+    if (!terrain) throw new Error(`Terrain layer uses unknown tile ${gid}`);
+    return terrain;
+  });
+}
+
+function readSpawns(tiled: TiledMap, objects: TiledObject[]): MapPoint[] {
+  return objects.filter((object) => object.type === 'spawn').map((object) => toTileUnits(tiled, object));
+}
+
+function readPickups(tiled: TiledMap, objects: TiledObject[]): PickupPoint[] {
+  return objects
+    .filter((object) => object.type === 'pickup')
+    .map((object) => ({
+      ...toTileUnits(tiled, object),
+      weapon: stringProperty(object.properties, 'weapon') ?? 'random',
+    }));
+}
+
+function toTileUnits(tiled: TiledMap, object: TiledObject): MapPoint {
+  return { x: object.x / tiled.tilewidth, y: object.y / tiled.tileheight };
+}
+
+function findLayer(tiled: TiledMap, name: string, type: TiledLayer['type']): TiledLayer {
+  const layer = tiled.layers.find((candidate) => candidate.name === name && candidate.type === type);
+  if (!layer) throw new Error(`Map is missing the "${name}" ${type} layer`);
+  return layer;
+}
+
+function stringProperty(properties: TiledProperty[] | undefined, name: string): string | undefined {
+  const value = properties?.find((property) => property.name === name)?.value;
+  return typeof value === 'string' ? value : undefined;
+}
