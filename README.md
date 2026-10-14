@@ -50,6 +50,8 @@ Game architecture
 - make sure the sprites, textures and other assets are all similar visually so that the visual theme of the game is consistent.
 - make sure the physics engine adds to the gameplay, the physics does not need to be completely realistic, but should be intuitive.
 - when users leave or become unresponsive due to technical or network issues we should handle that and pick it up early.
+- when you are in a game all users should be able to copy a link have have the invite code visible.
+- also update the join hash in the url so that you can copy and paste from the URL bar. 
 
 
 Powerups
@@ -78,4 +80,4 @@ Game score
 - The current game score should be visible in the top corner showing who all is in the round (including bots) and their kill/death ratio and any kill streak. 
 
 Credits
-- Announcer voice lines generated with ElevenLabs (elevenlabs.io), free tier, non-commercial use.
+- No third-party assets yet. Assets are chosen to be royalty- and attribution-free; see docs/PLAN.md (Audio and assets).

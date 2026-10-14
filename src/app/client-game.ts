@@ -2,11 +2,12 @@ import { TANK } from '../config';
 import { startGameLoop } from '../game-loop';
 import { ClientSession, type ClientSessionListener } from '../net/client-session';
 import { ClientGameState } from '../net/client-state';
+import { joinLink } from '../net/peer';
 import { GameView } from '../render/game-view';
-import { showHud, updateStatusPanel } from '../ui/hud';
+import { showHud, showInvitePanel, updateStatusPanel } from '../ui/hud';
 import { showNotice } from '../ui/notice';
 import { LocalControls } from './local-controls';
-import { returnToMenu } from './navigation';
+import { returnToMenu, showJoinLinkInAddressBar } from './navigation';
 
 const PING_SMOOTHING = 0.3;
 
@@ -22,6 +23,8 @@ export async function startClientGame(name: string, code: string, container: HTM
   const controls = new LocalControls(container);
 
   showHud();
+  showInvitePanel(code, joinLink(code));
+  showJoinLinkInAddressBar(code);
   session.start(createSessionListener(state, view));
 
   startGameLoop(

@@ -59,45 +59,46 @@ input {
   pointer-events: none;
 }
 
+/* Slim corner bars so the middle of the screen stays clear for play. */
 .panel {
   position: absolute;
-  top: 12px;
-  padding: 10px 14px;
-  border-radius: 10px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border-radius: 8px;
   background: var(--panel-background);
-  font-size: 14px;
+  font-size: 13px;
   pointer-events: auto;
 }
 
 #invite-panel {
-  left: 12px;
+  left: 10px;
 }
 
 #status-panel {
-  right: 12px;
+  right: 10px;
   font-variant-numeric: tabular-nums;
 }
 
 .panel-label {
   color: var(--text-muted);
   font-size: 12px;
-  margin-bottom: 6px;
-}
-
-.invite-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
 }
 
 .invite-code {
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
 }
 
-.invite-row button {
-  padding: 6px 10px;
+#invite-panel button {
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: 6px;
 }
 
 #help {
