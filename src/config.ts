@@ -13,6 +13,8 @@ export const NETWORK = {
   connectTimeoutMs: 10000,
   /** WebRTC can take 30s+ to notice a vanished peer, so give up on silent connections sooner. */
   silenceTimeoutMs: 5000,
+  /** A joining player's first frames can stall for seconds while shaders compile on slow machines. */
+  joinGraceMs: 15000,
   maxPlayers: 8,
   inputRedundancy: 3,
 };

@@ -1,13 +1,15 @@
 import type RAPIER from '@dimforge/rapier2d-compat';
 import { NETWORK, SIM_DT } from '../config';
-import { GAMEPLAY } from '../gameplay-config';
 import { lerpAngle } from '../sim/angles';
 import type { GameMap, MapPoint } from '../sim/game-map';
+import type { WeaponId } from '../sim/items';
+import { selectWeapon } from '../sim/loadout';
 import { createPhysicsWorld } from '../sim/physics';
 import type { PlayerInput } from '../sim/player-input';
 import { createTank, driveTank, rememberPreviousPose, syncTankPosition, type Tank } from '../sim/tank';
+import { FirePrediction } from './fire-prediction';
 import type { PlayerInfo } from './messages';
-import type { InputFrame, TankSnapshot } from './packets';
+import type { InputFrame, OwnStatus, TankSnapshot } from './packets';
 
 // A correction bigger than this is a teleport (e.g. respawn), so jump rather than glide.
 const SNAP_DISTANCE = 2;
@@ -33,7 +35,7 @@ export class LocalPrediction {
   private nextSeq = 1;
   private correctionX = 0;
   private correctionY = 0;
-  private fireCooldown = 0;
+  private readonly firePrediction = new FirePrediction();
   private alive = true;
 
   constructor(map: GameMap, player: PlayerInfo, start: MapPoint) {
@@ -41,15 +43,17 @@ export class LocalPrediction {
     this.tank = createTank(this.physics, player.id, player.name, player.color, start);
   }
 
-  /** Applies a local input straight away. Returns the frame to send and whether a shot was (probably) fired. */
-  step(input: PlayerInput): { frame: InputFrame; fired: boolean } {
+  /** Applies a local input straight away. Returns the frame to send and the weapon that (probably) fired. */
+  step(input: PlayerInput): { frame: InputFrame; fired: WeaponId | null } {
     rememberPreviousPose(this.tank);
+    if (input.selectWeapon) selectWeapon(this.tank.loadout, input.selectWeapon);
     if (this.alive) this.simulate(input);
 
     const frame = { seq: this.nextSeq++, input };
     this.history.push(frame);
     if (this.history.length > MAX_HISTORY) this.history.shift();
-    return { frame, fired: this.alive && this.predictFire(input) };
+    const fired = this.alive ? this.firePrediction.predict(this.tank.loadout, input) : null;
+    return { frame, fired };
   }
 
   /** The latest few frames; sending them again covers packets that get lost on the way. */
@@ -58,8 +62,9 @@ export class LocalPrediction {
   }
 
   /** Re-bases on the host's state. Returns true when the tank jumped rather than being smoothly corrected. */
-  reconcile(state: TankSnapshot, ackSeq: number): boolean {
+  reconcile(state: TankSnapshot, own: OwnStatus, ackSeq: number): boolean {
     this.history = this.history.filter((frame) => frame.seq > ackSeq);
+    this.syncLoadout(state, own);
     const justRespawned = state.alive && !this.alive;
     this.alive = state.alive;
     if (!state.alive) {
@@ -124,6 +129,18 @@ export class LocalPrediction {
     this.correctionY *= remaining;
   }
 
+  /** Takes what the host says we carry, then re-applies weapon switches it hasn't seen yet. */
+  private syncLoadout(state: TankSnapshot, own: OwnStatus): void {
+    const loadout = this.tank.loadout;
+    loadout.ammo = { ...own.ammo };
+    loadout.powerups = { ...own.powerups };
+    if (loadout.selected !== state.weapon) loadout.grenadeCharge = 0;
+    loadout.selected = state.weapon;
+    for (const frame of this.history) {
+      if (frame.input.selectWeapon) selectWeapon(loadout, frame.input.selectWeapon);
+    }
+  }
+
   private placeAt(state: TankSnapshot): void {
     this.tank.body.setTranslation({ x: state.x, y: state.y }, true);
     this.tank.body.setLinvel({ x: state.vx, y: state.vy }, true);
@@ -136,13 +153,6 @@ export class LocalPrediction {
     this.tank.aimAngle = input.aimAngle;
     this.physics.step();
     syncTankPosition(this.tank);
-  }
-
-  private predictFire(input: PlayerInput): boolean {
-    this.fireCooldown = Math.max(0, this.fireCooldown - SIM_DT);
-    if (!input.firing || this.fireCooldown > 0) return false;
-    this.fireCooldown = GAMEPLAY.weapons.cannon.cooldownSeconds;
-    return true;
   }
 
   private createOtherTank(state: TankSnapshot): Tank {

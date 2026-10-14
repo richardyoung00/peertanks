@@ -8,6 +8,8 @@ const TAG_HEIGHT = 0.95;
 interface NameTag {
   root: HTMLElement;
   fill: HTMLElement;
+  charge: HTMLElement;
+  chargeFill: HTMLElement;
 }
 
 /** HTML name and health labels that follow each tank on screen. HTML keeps the text crisp at any size. */
@@ -47,6 +49,9 @@ export class NameTags {
     const fraction = tank.health / GAMEPLAY.tank.maxHealth;
     tag.fill.style.width = `${fraction * 100}%`;
     tag.fill.style.background = healthColor(fraction);
+
+    tag.charge.hidden = tank.grenadeCharge === 0;
+    if (tank.grenadeCharge > 0) tag.chargeFill.style.width = `${tank.grenadeCharge * 100}%`;
   }
 
   private createTag(tank: TankViewState): NameTag {
@@ -61,10 +66,16 @@ export class NameTags {
     const fill = document.createElement('div');
     fill.className = 'name-tag-fill';
     bar.appendChild(fill);
-    root.append(name, bar);
+    const charge = document.createElement('div');
+    charge.className = 'name-tag-charge';
+    charge.hidden = true;
+    const chargeFill = document.createElement('div');
+    chargeFill.className = 'name-tag-charge-fill';
+    charge.appendChild(chargeFill);
+    root.append(name, bar, charge);
     this.layer.appendChild(root);
 
-    const tag = { root, fill };
+    const tag = { root, fill, charge, chargeFill };
     this.tags.set(tank.id, tag);
     return tag;
   }

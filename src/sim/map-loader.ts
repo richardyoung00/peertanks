@@ -1,4 +1,5 @@
 import type { GameMap, MapPoint, PickupPoint } from './game-map';
+import { isItemId, type ItemId } from './items';
 import { isTerrainType, type TerrainType } from './terrain';
 
 // The subset of the Tiled JSON format (https://doc.mapeditor.org/en/stable/reference/json-map-format/) we use.
@@ -119,8 +120,21 @@ function readPickups(tiled: TiledMap, objects: TiledObject[]): PickupPoint[] {
     .filter((object) => object.type === 'pickup')
     .map((object) => ({
       ...toTileUnits(tiled, object),
-      weapon: stringProperty(object.properties, 'weapon') ?? 'random',
+      items: parseItemList(stringProperty(object.properties, 'items') ?? ''),
+      respawnSeconds: numberProperty(object.properties, 'respawnSeconds'),
     }));
+}
+
+/** A comma-separated list such as "rocket, grenade, mortar". */
+function parseItemList(text: string): ItemId[] {
+  const names = text
+    .split(',')
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+  for (const name of names) {
+    if (!isItemId(name)) throw new Error(`Pickup spot lists unknown item "${name}"`);
+  }
+  return names as ItemId[];
 }
 
 function toTileUnits(tiled: TiledMap, object: TiledObject): MapPoint {
@@ -136,4 +150,9 @@ function findLayer(tiled: TiledMap, name: string, type: TiledLayer['type']): Til
 function stringProperty(properties: TiledProperty[] | undefined, name: string): string | undefined {
   const value = properties?.find((property) => property.name === name)?.value;
   return typeof value === 'string' ? value : undefined;
+}
+
+function numberProperty(properties: TiledProperty[] | undefined, name: string): number | undefined {
+  const value = properties?.find((property) => property.name === name)?.value;
+  return typeof value === 'number' ? value : undefined;
 }

@@ -17,6 +17,13 @@ function interactionGroups(membership: number, filter: number): number {
 
 export const TANK_COLLISION_GROUPS = interactionGroups(GROUP_TANK, GROUP_TERRAIN | GROUP_TANK | GROUP_SHOT);
 export const SHOT_QUERY_GROUPS = interactionGroups(GROUP_SHOT, GROUP_TERRAIN | GROUP_TANK);
+/** Terrain that blocks shots, ignoring tanks; used to check whether walls shelter a tank from an explosion. */
+export const COVER_QUERY_GROUPS = interactionGroups(GROUP_SHOT, GROUP_TERRAIN);
+
+/** Whether a point is inside a wall, rock or tree. */
+export function isInsideTerrain(physics: RAPIER.World, x: number, y: number): boolean {
+  return physics.projectPoint({ x, y }, true, undefined, COVER_QUERY_GROUPS)?.isInside ?? false;
+}
 
 export async function initPhysics(): Promise<void> {
   await RAPIER.init();

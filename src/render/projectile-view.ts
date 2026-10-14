@@ -1,44 +1,51 @@
 import * as THREE from 'three';
-import { BARREL_HEIGHT } from './tank-model';
+import type { ProjectileKind } from '../sim/projectiles';
+import { createProjectileModel, projectileMaterials } from './projectile-models';
 import type { ProjectileViewState } from './view-state';
 
-const shellGeometry = new THREE.CapsuleGeometry(0.07, 0.14, 4, 8).rotateZ(Math.PI / 2);
-const shellMaterial = new THREE.MeshStandardMaterial({
-  color: 0x2a2a2a,
-  emissive: 0xffa040,
-  emissiveIntensity: 0.35,
-  roughness: 0.4,
-});
+const GRENADE_BLINK_SPEED = 10;
 
-/** Keeps one mesh per live projectile, adding and removing meshes as projectiles come and go. */
+interface ProjectileModel {
+  kind: ProjectileKind;
+  object: THREE.Object3D;
+}
+
+/** Keeps one model per live projectile, adding and removing models as projectiles come and go. */
 export class ProjectileView {
   readonly object = new THREE.Group();
-  private readonly meshes = new Map<number, THREE.Mesh>();
+  private readonly models = new Map<number, ProjectileModel>();
+  private elapsed = 0;
 
-  sync(projectiles: ProjectileViewState[]): void {
+  sync(projectiles: ProjectileViewState[], frameDt: number): void {
+    this.elapsed += frameDt;
+    projectileMaterials.grenadeLight.visible = Math.sin(this.elapsed * GRENADE_BLINK_SPEED) > 0;
+
     const alive = new Set<number>();
     for (const projectile of projectiles) {
       alive.add(projectile.id);
-      const mesh = this.meshes.get(projectile.id) ?? this.createMesh(projectile.id);
-      mesh.position.set(projectile.x, BARREL_HEIGHT, projectile.y);
-      mesh.rotation.y = -projectile.angle;
+      const model = this.modelFor(projectile);
+      model.object.position.set(projectile.x, projectile.height, projectile.y);
+      model.object.rotation.y = -projectile.angle;
     }
     this.removeMissing(alive);
   }
 
-  private createMesh(id: number): THREE.Mesh {
-    const mesh = new THREE.Mesh(shellGeometry, shellMaterial);
-    mesh.castShadow = true;
-    this.meshes.set(id, mesh);
-    this.object.add(mesh);
-    return mesh;
+  private modelFor(projectile: ProjectileViewState): ProjectileModel {
+    const existing = this.models.get(projectile.id);
+    if (existing && existing.kind === projectile.kind) return existing;
+    if (existing) this.object.remove(existing.object);
+
+    const model = { kind: projectile.kind, object: createProjectileModel(projectile.kind) };
+    this.models.set(projectile.id, model);
+    this.object.add(model.object);
+    return model;
   }
 
   private removeMissing(alive: Set<number>): void {
-    for (const [id, mesh] of this.meshes) {
+    for (const [id, model] of this.models) {
       if (alive.has(id)) continue;
-      this.object.remove(mesh);
-      this.meshes.delete(id);
+      this.object.remove(model.object);
+      this.models.delete(id);
     }
   }
 }

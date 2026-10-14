@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import type { PowerupId, WeaponId } from '../sim/items';
+import { PowerupVisuals } from './powerup-visuals';
+import { buildBarrel } from './tank-barrels';
 
 export const BARREL_HEIGHT = 0.42;
 
@@ -24,8 +27,10 @@ export class TankModel {
   readonly root = new THREE.Group();
   private readonly hull = new THREE.Group();
   private readonly turret = new THREE.Group();
-  private readonly barrel = new THREE.Group();
+  private readonly powerups = new PowerupVisuals();
   private readonly materials: TankMaterials;
+  private barrel: THREE.Group;
+  private weapon: WeaponId = 'cannon';
   private recoil = 0;
   private hitFlash = 0;
   private shielded = false;
@@ -34,12 +39,27 @@ export class TankModel {
   constructor(color: number) {
     this.materials = createMaterials(color);
     buildHull(this.hull, this.materials);
-    buildTurret(this.turret, this.barrel, this.materials);
+    buildTurret(this.turret, this.materials);
+    this.barrel = buildBarrel(this.weapon, this.materials.barrel);
+    this.turret.add(this.barrel);
     this.root.add(this.hull, this.turret);
     this.root.traverse((child) => {
       child.castShadow = true;
       child.receiveShadow = true;
     });
+    this.root.add(this.powerups.object);
+  }
+
+  setWeapon(weapon: WeaponId): void {
+    if (weapon === this.weapon) return;
+    this.weapon = weapon;
+    this.turret.remove(this.barrel);
+    this.barrel = buildBarrel(weapon, this.materials.barrel);
+    this.turret.add(this.barrel);
+  }
+
+  setPowerups(powerups: PowerupId[]): void {
+    this.powerups.setActive(powerups);
   }
 
   /** Angles are in map space (0 = east, increasing clockwise on screen). */
@@ -74,6 +94,7 @@ export class TankModel {
     const squash = HIT_SQUASH * this.hitFlash;
     this.hull.scale.set(1 + squash, 1 - squash, 1 + squash);
     this.updateGlow();
+    this.powerups.update(this.elapsed);
   }
 
   private updateGlow(): void {
@@ -109,17 +130,10 @@ function buildHull(hull: THREE.Group, materials: TankMaterials): void {
   addBox(hull, materials.accent, [0.12, 0.08, 0.4], [0.32, 0.27, 0]);
 }
 
-function buildTurret(turret: THREE.Group, barrel: THREE.Group, materials: TankMaterials): void {
+function buildTurret(turret: THREE.Group, materials: TankMaterials): void {
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.23, 0.14, 8), materials.body);
   base.position.y = BARREL_HEIGHT - 0.02;
   const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 8), materials.accent);
   hatch.position.set(-0.06, BARREL_HEIGHT + 0.07, 0.04);
-
-  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.46, 8).rotateZ(-Math.PI / 2), materials.barrel);
-  tube.position.set(0.37, BARREL_HEIGHT, 0);
-  const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.08, 8).rotateZ(-Math.PI / 2), materials.barrel);
-  muzzle.position.set(0.6, BARREL_HEIGHT, 0);
-  barrel.add(tube, muzzle);
-
-  turret.add(base, hatch, barrel);
+  turret.add(base, hatch);
 }

@@ -10,7 +10,7 @@ import { InputQueue } from './input-queue';
 import { isClientMessage, type HostMessage, type JoinMetadata, type PlayerInfo } from './messages';
 import { decodePacket, encodeSnapshot } from './packets';
 import { Roster } from './roster';
-import { buildSnapshot } from './snapshot-builder';
+import { buildSnapshot, ownStatusOf } from './snapshot-builder';
 import { OUTDATED_HOST_MESSAGE, OUTDATED_JOINER_MESSAGE, type RejectionCode } from './version-check';
 
 interface RemotePlayer {
@@ -127,6 +127,7 @@ export class HostSession {
     });
 
     player.connection.on('data', (data) => {
+      player.lastHeardAt = performance.now();
       if (isClientMessage(data) && data.type === 'ping') this.send(player.connection, { type: 'pong', sentAt: data.sentAt });
     });
 
@@ -135,9 +136,10 @@ export class HostSession {
   }
 
   private dropSilentPlayers(): void {
-    const cutoff = performance.now() - NETWORK.silenceTimeoutMs;
+    const now = performance.now();
     for (const player of this.remotePlayers.values()) {
-      if (player.lastHeardAt >= cutoff) continue;
+      const allowedSilence = player.fastChannelConfirmed ? NETWORK.silenceTimeoutMs : NETWORK.joinGraceMs;
+      if (now - player.lastHeardAt <= allowedSilence) continue;
       player.connection.close();
       this.removePlayer(player.info.id, 'stopped responding');
     }
@@ -165,7 +167,8 @@ export class HostSession {
     const snapshot = buildSnapshot(this.world, this.roster);
     for (const player of this.remotePlayers.values()) {
       if (!player.fastChannelConfirmed) continue;
-      const packet = encodeSnapshot({ ...snapshot, ackSeq: player.inputs.lastAppliedSeq });
+      const own = ownStatusOf(this.world.tanks.get(player.info.id));
+      const packet = encodeSnapshot({ ...snapshot, ackSeq: player.inputs.lastAppliedSeq, own });
       sendIfOpen(player.fastChannel, packet);
     }
   }

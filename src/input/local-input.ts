@@ -1,3 +1,4 @@
+import type { WeaponId } from '../sim/items';
 import type { PlayerInput } from '../sim/player-input';
 import type { Tank } from '../sim/tank';
 import type { Keyboard } from './keyboard';
@@ -9,7 +10,13 @@ export interface GroundPoint {
 }
 
 /** Turns the local keyboard and mouse state into the same input format remote players will send. */
-export function readLocalInput(keyboard: Keyboard, mouse: Mouse, aimPoint: GroundPoint | null, tank: Tank): PlayerInput {
+export function readLocalInput(
+  keyboard: Keyboard,
+  mouse: Mouse,
+  aimPoint: GroundPoint | null,
+  tank: Tank,
+  selectWeapon: WeaponId | null,
+): PlayerInput {
   const move = keyboard.moveDirection();
   const aimX = aimPoint ? aimPoint.x - tank.x : Math.cos(tank.aimAngle);
   const aimY = aimPoint ? aimPoint.z - tank.y : Math.sin(tank.aimAngle);
@@ -19,5 +26,6 @@ export function readLocalInput(keyboard: Keyboard, mouse: Mouse, aimPoint: Groun
     aimAngle: Math.atan2(aimY, aimX),
     aimDistance: Math.hypot(aimX, aimY),
     firing: mouse.buttonDown,
+    selectWeapon,
   };
 }

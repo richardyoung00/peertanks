@@ -8,6 +8,7 @@ import { showHud, showInvitePanel, updateStatusPanel } from '../ui/hud';
 import { showNotice } from '../ui/notice';
 import type { PlayerLookup } from '../ui/player-lookup';
 import { GameHud } from './game-hud';
+import { landingTarget } from './landing-target';
 import { LocalControls } from './local-controls';
 import { returnToMenu, showJoinLinkInAddressBar } from './navigation';
 
@@ -44,8 +45,12 @@ export async function startClientGame(name: string, code: string, container: HTM
       view.handleEvents(events);
       hud.handleEvents(events, now);
       state.prediction.decayCorrection(frameDt);
-      view.render(state.viewState(now, alpha), frameDt, controls.aimPoint(view));
-      hud.update(state.round, state.scores, now);
+      const aimPoint = controls.aimPoint(view);
+      const viewState = state.viewState(now, alpha);
+      const ownTank = viewState.tanks.find((tank) => tank.id === state.ownPlayer.id);
+      const target = ownTank?.alive ? landingTarget(ownTank, state.prediction.tank.loadout, aimPoint) : null;
+      view.render(viewState, frameDt, aimPoint, target);
+      hud.update(state.round, state.scores, state.prediction.tank.loadout, now);
     },
   );
 }

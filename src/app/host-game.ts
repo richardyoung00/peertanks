@@ -9,7 +9,9 @@ import { fetchMap } from '../sim/map-loader';
 import { showHud, showInvitePanel, updateStatusPanel } from '../ui/hud';
 import type { PlayerLookup } from '../ui/player-lookup';
 import { showWarningBanner } from '../ui/warning-banner';
+import { enableDevCheats } from './dev-cheats';
 import { GameHud } from './game-hud';
+import { landingTarget } from './landing-target';
 import { LocalControls } from './local-controls';
 import { viewStateFromWorld } from './world-view-state';
 
@@ -35,6 +37,7 @@ export async function startHostGame(name: string, container: HTMLElement): Promi
   const view = new GameView(container, map);
   view.snapCamera(tank.x, tank.y);
   const controls = new LocalControls(container);
+  if (import.meta.env.DEV) enableDevCheats(tank);
 
   showHud();
   showInvitePanel(code, joinLink(code));
@@ -53,8 +56,10 @@ export async function startHostGame(name: string, container: HTMLElement): Promi
       session.broadcastTick(events);
     },
     (alpha, frameDt) => {
-      view.render(viewStateFromWorld(world, alpha, tank.id), frameDt, controls.aimPoint(view));
-      hud.update(world.round, world.scores.all, nowSeconds());
+      const aimPoint = controls.aimPoint(view);
+      const target = tank.alive ? landingTarget(tank, tank.loadout, aimPoint) : null;
+      view.render(viewStateFromWorld(world, alpha, tank.id), frameDt, aimPoint, target);
+      hud.update(world.round, world.scores.all, tank.loadout, nowSeconds());
     },
   );
 }

@@ -2,6 +2,7 @@ import RAPIER from '@dimforge/rapier2d-compat';
 import { GAMEPLAY } from '../gameplay-config';
 import { rotateTowards, wrapAngle } from './angles';
 import type { MapPoint } from './game-map';
+import { emptyLoadout, type Loadout } from './loadout';
 import { TANK_COLLISION_GROUPS } from './physics';
 import type { PlayerInput } from './player-input';
 
@@ -17,7 +18,6 @@ export interface Tank {
   hullAngle: number;
   prevHullAngle: number;
   aimAngle: number;
-  weaponCooldown: number;
   health: number;
   alive: boolean;
   /** Seconds until a dead tank comes back. */
@@ -27,6 +27,9 @@ export interface Tank {
   /** Who last damaged this tank, so they can be credited if it then falls into a hazard. */
   lastAttackerId: string | null;
   lastAttackedTimer: number;
+  /** Seconds of reduced steering left after being knocked back by an explosion. */
+  knockbackTimer: number;
+  loadout: Loadout;
 }
 
 /** Kinematic tanks are moved directly rather than by physics; clients use them for other players' tanks. */
@@ -59,13 +62,14 @@ export function createTank(
     hullAngle: 0,
     prevHullAngle: 0,
     aimAngle: 0,
-    weaponCooldown: 0,
     health: GAMEPLAY.tank.maxHealth,
     alive: true,
     respawnTimer: 0,
     invulnerableTimer: 0,
     lastAttackerId: null,
     lastAttackedTimer: 0,
+    knockbackTimer: 0,
+    loadout: emptyLoadout(),
   };
 }
 
@@ -82,14 +86,20 @@ export function driveTank(tank: Tank, input: PlayerInput, dt: number): void {
   const directionY = length > 0 ? input.moveY / length : 0;
 
   const velocity = tank.body.linvel();
-  const changeX = directionX * GAMEPLAY.tank.maxSpeed - velocity.x;
-  const changeY = directionY * GAMEPLAY.tank.maxSpeed - velocity.y;
+  const maxSpeed = GAMEPLAY.tank.maxSpeed * speedMultiplier(tank);
+  const changeX = directionX * maxSpeed - velocity.x;
+  const changeY = directionY * maxSpeed - velocity.y;
   const changeLength = Math.hypot(changeX, changeY);
-  const maxChange = GAMEPLAY.tank.acceleration * dt;
+  const control = tank.knockbackTimer > 0 ? GAMEPLAY.explosions.knockbackControlFactor : 1;
+  const maxChange = GAMEPLAY.tank.acceleration * control * dt;
   const scale = changeLength > maxChange ? maxChange / changeLength : 1;
   tank.body.setLinvel({ x: velocity.x + changeX * scale, y: velocity.y + changeY * scale }, true);
 
   if (length > 0) turnHull(tank, Math.atan2(directionY, directionX), dt);
+}
+
+function speedMultiplier(tank: Tank): number {
+  return tank.loadout.powerups.speed > 0 ? GAMEPLAY.powerups.speed.speedMultiplier : 1;
 }
 
 /** Tanks can drive either way, so the hull turns to whichever end is closest to the travel direction. */

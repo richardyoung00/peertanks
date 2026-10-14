@@ -1,3 +1,4 @@
+import type { ItemId } from './items';
 import type { TerrainType } from './terrain';
 
 /** A position in tile units, where (0, 0) is the top-left corner of the map. */
@@ -7,7 +8,9 @@ export interface MapPoint {
 }
 
 export interface PickupPoint extends MapPoint {
-  weapon: string;
+  /** What can appear here; empty means anything. */
+  items: ItemId[];
+  respawnSeconds?: number;
 }
 
 export interface GameMap {

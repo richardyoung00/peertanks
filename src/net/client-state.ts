@@ -1,6 +1,9 @@
 import { SIM_DT } from '../config';
-import type { TankViewState, ViewState } from '../render/view-state';
+import { GAMEPLAY } from '../gameplay-config';
+import type { PickupViewState, TankViewState, ViewState } from '../render/view-state';
 import type { GameEvent } from '../sim/game-events';
+import type { MapPoint } from '../sim/game-map';
+import { POWERUP_IDS, type ItemId } from '../sim/items';
 import type { PlayerScore } from '../sim/scores';
 import type { WelcomeMessage } from './client-session';
 import type { PlayerInfo } from './messages';
@@ -18,12 +21,15 @@ export class ClientGameState {
   readonly prediction: LocalPrediction;
   scores: PlayerScore[];
   round: RoundSnapshot = { phase: 'playing', timeLeft: 0 };
+  /** What each pickup spot holds, from the latest snapshot. */
+  pickups: (ItemId | null)[] = [];
 
   private readonly players = new Map<string, PlayerInfo>();
   private readonly timeline = new SnapshotTimeline();
   private queuedEvents: QueuedEvents[] = [];
   /** Our tank's latest health and status from the host; its position comes from prediction instead. */
   private ownState: TankSnapshot | null = null;
+  private readonly pickupSpots: MapPoint[];
 
   constructor(
     welcome: WelcomeMessage,
@@ -31,6 +37,7 @@ export class ClientGameState {
   ) {
     welcome.players.forEach((player) => this.addPlayer(player));
     this.scores = welcome.scores;
+    this.pickupSpots = welcome.map.pickups;
     this.prediction = new LocalPrediction(welcome.map, this.ownPlayer, welcome.map.spawns[0]);
   }
 
@@ -60,12 +67,13 @@ export class ClientGameState {
   receiveSnapshot(snapshot: Snapshot, nowSeconds: number): boolean {
     if (!this.timeline.push(snapshot, nowSeconds)) return false;
     this.round = snapshot.round;
+    this.pickups = snapshot.pickups;
     const ownState = snapshot.tanks.find((tank) => tank.netId === this.ownPlayer.netId);
     if (!ownState) return false;
 
     const firstState = this.ownState === null;
     this.ownState = ownState;
-    const jumped = this.prediction.reconcile(ownState, snapshot.ackSeq);
+    const jumped = this.prediction.reconcile(ownState, snapshot.own, snapshot.ackSeq);
     return jumped || firstState;
   }
 
@@ -95,19 +103,36 @@ export class ClientGameState {
       if (player && player.id !== this.ownId) tanks.push(toTankView(player, tank, tank));
     }
 
-    if (!this.ownState) return { tanks, projectiles: [], cameraFocus: null };
+    const pickups = this.pickupViews();
+    if (!this.ownState) return { tanks, projectiles: [], pickups, cameraFocus: null };
 
-    const ownPose = this.prediction.pose(alpha);
-    tanks.push(toTankView(this.ownPlayer, ownPose, this.ownState));
+    tanks.push(this.ownTankView(alpha, this.ownState));
     const projectiles = (sample?.projectiles ?? []).map((projectile) => ({
       id: projectile.id,
+      kind: projectile.kind,
       x: projectile.x,
       y: projectile.y,
+      height: projectile.height,
       angle: Math.atan2(projectile.vy, projectile.vx),
     }));
     // While dead, the camera holds still until the tank respawns.
-    const cameraFocus = this.ownState.alive ? { x: ownPose.x, y: ownPose.y } : null;
-    return { tanks, projectiles, cameraFocus };
+    const own = tanks[tanks.length - 1];
+    const cameraFocus = this.ownState.alive ? { x: own.x, y: own.y } : null;
+    return { tanks, projectiles, pickups, cameraFocus };
+  }
+
+  /** Position and chosen weapon come from prediction, so they react instantly; the rest is the host's word. */
+  private ownTankView(alpha: number, status: TankSnapshot): TankViewState {
+    const loadout = this.prediction.tank.loadout;
+    const view = toTankView(this.ownPlayer, this.prediction.pose(alpha), status);
+    view.weapon = loadout.selected;
+    view.powerups = POWERUP_IDS.filter((powerup) => loadout.powerups[powerup] > 0);
+    view.grenadeCharge = loadout.grenadeCharge / GAMEPLAY.weapons.grenade.maxChargeSeconds;
+    return view;
+  }
+
+  private pickupViews(): PickupViewState[] {
+    return this.pickupSpots.map((spot, index) => ({ x: spot.x, y: spot.y, item: this.pickups[index] ?? null }));
   }
 
   private playerByNetId(netId: number): PlayerInfo | undefined {
@@ -134,5 +159,8 @@ function toTankView(player: PlayerInfo, pose: Pose, status: TankSnapshot): TankV
     health: status.health,
     alive: status.alive,
     invulnerable: status.invulnerable,
+    weapon: status.weapon,
+    powerups: status.powerups,
+    grenadeCharge: 0,
   };
 }

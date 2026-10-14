@@ -103,11 +103,11 @@ input {
 
 #help {
   position: absolute;
-  bottom: 12px;
+  bottom: 4px;
   width: 100%;
   text-align: center;
-  font-size: 14px;
-  opacity: 0.7;
+  font-size: 11px;
+  opacity: 0.6;
   text-shadow: 0 1px 2px #000;
 }
 
@@ -389,3 +389,87 @@ input {
   pointer-events: none;
   z-index: 10;
 }
+
+#loadout {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+#weapon-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.weapon-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 62px;
+  padding: 4px 6px 3px;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  background: var(--panel-background);
+  font-size: 11px;
+}
+
+.weapon-slot.empty {
+  opacity: 0.35;
+}
+
+.weapon-slot.selected {
+  border-color: var(--accent);
+}
+
+.weapon-key {
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.weapon-name {
+  margin-top: 8px;
+  white-space: nowrap;
+}
+
+.weapon-ammo {
+  min-height: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#powerup-bar {
+  display: flex;
+  gap: 6px;
+}
+
+.powerup-chip {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--panel-background);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.name-tag-charge {
+  width: 44px;
+  height: 5px;
+  margin: 2px auto 0;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.name-tag-charge-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #facc15, #f97316, #ef4444);
+}
+

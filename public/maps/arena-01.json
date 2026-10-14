@@ -607,25 +607,6 @@
      "type": "spawn"
     },
     {
-     "id": 3,
-     "name": "",
-     "point": true,
-     "rotation": 0,
-     "visible": true,
-     "width": 0,
-     "height": 0,
-     "x": 464,
-     "y": 112,
-     "type": "pickup",
-     "properties": [
-      {
-       "name": "weapon",
-       "type": "string",
-       "value": "rocket"
-      }
-     ]
-    },
-    {
      "id": 4,
      "name": "",
      "point": true,
@@ -636,25 +617,6 @@
      "x": 656,
      "y": 176,
      "type": "spawn"
-    },
-    {
-     "id": 5,
-     "name": "",
-     "point": true,
-     "rotation": 0,
-     "visible": true,
-     "width": 0,
-     "height": 0,
-     "x": 304,
-     "y": 272,
-     "type": "pickup",
-     "properties": [
-      {
-       "name": "weapon",
-       "type": "string",
-       "value": "machinegun"
-      }
-     ]
     },
     {
      "id": 6,
@@ -681,25 +643,6 @@
      "type": "spawn"
     },
     {
-     "id": 8,
-     "name": "",
-     "point": true,
-     "rotation": 0,
-     "visible": true,
-     "width": 0,
-     "height": 0,
-     "x": 336,
-     "y": 368,
-     "type": "pickup",
-     "properties": [
-      {
-       "name": "weapon",
-       "type": "string",
-       "value": "grenade"
-      }
-     ]
-    },
-    {
      "id": 9,
      "name": "",
      "point": true,
@@ -710,25 +653,6 @@
      "x": 80,
      "y": 432,
      "type": "spawn"
-    },
-    {
-     "id": 10,
-     "name": "",
-     "point": true,
-     "rotation": 0,
-     "visible": true,
-     "width": 0,
-     "height": 0,
-     "x": 432,
-     "y": 528,
-     "type": "pickup",
-     "properties": [
-      {
-       "name": "weapon",
-       "type": "string",
-       "value": "laser"
-      }
-     ]
     },
     {
      "id": 11,
@@ -753,6 +677,120 @@
      "x": 816,
      "y": 560,
      "type": "spawn"
+    },
+    {
+     "id": 13,
+     "name": "",
+     "type": "pickup",
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "width": 0,
+     "height": 0,
+     "x": 464,
+     "y": 112,
+     "properties": [
+      {
+       "name": "items",
+       "type": "string",
+       "value": "rocket, grenade, mortar"
+      }
+     ]
+    },
+    {
+     "id": 14,
+     "name": "",
+     "type": "pickup",
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "width": 0,
+     "height": 0,
+     "x": 304,
+     "y": 272,
+     "properties": [
+      {
+       "name": "items",
+       "type": "string",
+       "value": "machine-gun, bouncy-cannon, laser"
+      }
+     ]
+    },
+    {
+     "id": 15,
+     "name": "",
+     "type": "pickup",
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "width": 0,
+     "height": 0,
+     "x": 336,
+     "y": 368,
+     "properties": [
+      {
+       "name": "items",
+       "type": "string",
+       "value": ""
+      }
+     ]
+    },
+    {
+     "id": 16,
+     "name": "",
+     "type": "pickup",
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "width": 0,
+     "height": 0,
+     "x": 432,
+     "y": 528,
+     "properties": [
+      {
+       "name": "items",
+       "type": "string",
+       "value": "rocket, laser, bouncy-cannon"
+      }
+     ]
+    },
+    {
+     "id": 17,
+     "name": "",
+     "type": "pickup",
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "width": 0,
+     "height": 0,
+     "x": 656,
+     "y": 272,
+     "properties": [
+      {
+       "name": "items",
+       "type": "string",
+       "value": "shield, speed, damage-boost, dead-mans-switch"
+      }
+     ]
+    },
+    {
+     "id": 18,
+     "name": "",
+     "type": "pickup",
+     "point": true,
+     "rotation": 0,
+     "visible": true,
+     "width": 0,
+     "height": 0,
+     "x": 368,
+     "y": 464,
+     "properties": [
+      {
+       "name": "items",
+       "type": "string",
+       "value": "shield, speed, damage-boost, dead-mans-switch"
+      }
+     ]
     }
    ],
    "opacity": 1,
@@ -763,7 +801,7 @@
   }
  ],
  "nextlayerid": 3,
- "nextobjectid": 13,
+ "nextobjectid": 19,
  "orientation": "orthogonal",
  "renderorder": "right-down",
  "properties": [

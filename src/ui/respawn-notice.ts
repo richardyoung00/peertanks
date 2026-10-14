@@ -1,6 +1,7 @@
 import { GAMEPLAY } from '../gameplay-config';
 import type { TankKilledEvent } from '../sim/game-events';
 import { element } from './dom';
+import { isHazard } from './kill-messages';
 import { playerNameElement, type PlayerLookup } from './player-lookup';
 
 const HAZARD_DEATH_TEXT = {
@@ -36,6 +37,7 @@ export class RespawnNotice {
 
   private headline(event: TankKilledEvent): (string | HTMLElement)[] {
     if (event.killerId) return ['Destroyed by ', playerNameElement(this.players, event.killerId)];
-    return event.cause === 'cannon' ? ['Destroyed'] : [HAZARD_DEATH_TEXT[event.cause]];
+    if (isHazard(event.cause)) return [HAZARD_DEATH_TEXT[event.cause]];
+    return ['You blew yourself up'];
   }
 }

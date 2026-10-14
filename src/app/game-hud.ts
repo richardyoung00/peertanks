@@ -1,4 +1,5 @@
 import type { GameEvent } from '../sim/game-events';
+import type { Loadout } from '../sim/loadout';
 import type { RoundPhase } from '../sim/round';
 import type { PlayerScore } from '../sim/scores';
 import { EventFeed, type FeedPlayer } from '../ui/event-feed';
@@ -7,18 +8,20 @@ import { RespawnNotice } from '../ui/respawn-notice';
 import { ResultsScreen } from '../ui/results-screen';
 import { updateRoundTimer } from '../ui/round-timer';
 import { ScoreboardPanel } from '../ui/scoreboard';
+import { WeaponBar } from '../ui/weapon-bar';
 
 export interface RoundStatus {
   phase: RoundPhase;
   timeLeft: number;
 }
 
-/** The in-game overlay: round timer, scoreboard, event feed, respawn countdown and end-of-round results. */
+/** The in-game overlay: round timer, scoreboard, weapon bar, event feed, respawn countdown and results. */
 export class GameHud {
   private readonly feed: EventFeed;
   private readonly scoreboard: ScoreboardPanel;
   private readonly results: ResultsScreen;
   private readonly respawnNotice: RespawnNotice;
+  private readonly weaponBar = new WeaponBar();
 
   constructor(
     players: PlayerLookup,
@@ -49,8 +52,9 @@ export class GameHud {
   }
 
   /** Driven by state rather than events, so someone joining mid-results still sees the right screen. */
-  update(round: RoundStatus, scores: PlayerScore[], nowSeconds: number): void {
+  update(round: RoundStatus, scores: PlayerScore[], loadout: Loadout, nowSeconds: number): void {
     updateRoundTimer(round.phase, round.timeLeft);
+    this.weaponBar.update(loadout);
     this.scoreboard.update(scores);
     this.respawnNotice.update(nowSeconds);
 

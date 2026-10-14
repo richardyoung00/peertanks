@@ -1,24 +1,29 @@
 import type RAPIER from '@dimforge/rapier2d-compat';
 import { SIM_DT } from '../config';
-import { GAMEPLAY } from '../gameplay-config';
-import { damageTank, killIfOnHazard, respawnTank, updateLifeTimers, type CombatContext } from './combat';
-import type { GameEvent } from './game-events';
+import { GAMEPLAY, type ExplosionConfig } from '../gameplay-config';
+import { killIfOnHazard, respawnTank, updateLifeTimers } from './combat';
+import { explode } from './explosions';
+import type { DeathCause, GameEvent } from './game-events';
 import type { GameMap } from './game-map';
+import { ITEM_IDS, type ItemId } from './items';
 import { createPhysicsWorld } from './physics';
+import { PickupField } from './pickups';
 import { IDLE_INPUT, type PlayerInput } from './player-input';
-import { advanceProjectile, isExpired, type Projectile } from './projectiles';
+import { stepProjectile } from './projectile-behaviour';
+import type { Projectile } from './projectiles';
 import { RoundClock } from './round';
 import { Scoreboard } from './scores';
 import { chooseSpawn } from './spawns';
 import { createTank, driveTank, rememberPreviousPose, syncTankPosition, type Tank } from './tank';
-import { fireCannon } from './weapons/cannon';
-import type { WeaponContext } from './weapons/weapon-context';
+import { updateWeapon } from './weapons/weapon-control';
+import type { WorldContext } from './world-context';
 
-export class GameWorld implements WeaponContext, CombatContext {
+export class GameWorld implements WorldContext {
   readonly physics: RAPIER.World;
   readonly tanks = new Map<string, Tank>();
   readonly scores = new Scoreboard();
   readonly round = new RoundClock();
+  readonly pickups: PickupField;
   projectiles: Projectile[] = [];
   tick = 0;
 
@@ -26,8 +31,13 @@ export class GameWorld implements WeaponContext, CombatContext {
   private nextProjectileId = 1;
   private tanksByColliderHandle = new Map<number, Tank>();
 
-  constructor(readonly map: GameMap) {
+  constructor(
+    readonly map: GameMap,
+    allowedItems: readonly ItemId[] = ITEM_IDS,
+  ) {
     this.physics = createPhysicsWorld(map);
+    this.pickups = new PickupField(map, allowedItems);
+    this.pickups.fillAll();
   }
 
   addTank(id: string, name: string, color: number): Tank {
@@ -65,7 +75,8 @@ export class GameWorld implements WeaponContext, CombatContext {
       killIfOnHazard(this, tank);
       updateLifeTimers(this, tank, SIM_DT);
     }
-    this.stepProjectiles();
+    this.projectiles = this.projectiles.filter((projectile) => stepProjectile(this, projectile, SIM_DT));
+    if (this.round.isPlaying) this.pickups.step(this, SIM_DT);
     this.tick++;
 
     const events = this.events;
@@ -81,10 +92,19 @@ export class GameWorld implements WeaponContext, CombatContext {
     this.events.push(event);
   }
 
+  explode(x: number, y: number, config: ExplosionConfig, ownerId: string, cause: DeathCause, damageMultiplier: number): void {
+    explode(this, x, y, config, ownerId, cause, damageMultiplier);
+  }
+
+  tankByCollider(collider: RAPIER.Collider): Tank | undefined {
+    return this.tanksByColliderHandle.get(collider.handle);
+  }
+
   private stepRound(): void {
     const change = this.round.step(SIM_DT);
     if (change === 'ended') {
       this.projectiles = [];
+      this.pickups.clear();
       this.emit({ type: 'roundEnded', standings: this.scores.all });
     } else if (change === 'started') {
       this.startNewRound();
@@ -94,6 +114,7 @@ export class GameWorld implements WeaponContext, CombatContext {
   private startNewRound(): void {
     this.scores.reset();
     this.projectiles = [];
+    this.pickups.fillAll();
     for (const tank of this.tanks.values()) respawnTank(this, tank);
     this.emit({ type: 'roundStarted' });
   }
@@ -101,24 +122,6 @@ export class GameWorld implements WeaponContext, CombatContext {
   private applyInput(tank: Tank, input: PlayerInput): void {
     driveTank(tank, input, SIM_DT);
     tank.aimAngle = input.aimAngle;
-    tank.weaponCooldown = Math.max(0, tank.weaponCooldown - SIM_DT);
-
-    if (input.firing && tank.weaponCooldown === 0) {
-      fireCannon(this, tank);
-      tank.weaponCooldown = GAMEPLAY.weapons.cannon.cooldownSeconds;
-    }
-  }
-
-  private stepProjectiles(): void {
-    this.projectiles = this.projectiles.filter((projectile) => {
-      const owner = this.tanks.get(projectile.ownerId);
-      const hit = advanceProjectile(this.physics, projectile, SIM_DT, owner?.body);
-      if (!hit) return !isExpired(projectile);
-
-      const tankHit = this.tanksByColliderHandle.get(hit.collider.handle);
-      this.emit({ type: 'shellHit', x: hit.x, y: hit.y, tankId: tankHit?.id });
-      if (tankHit) damageTank(this, tankHit, projectile.damage, projectile.ownerId, 'cannon');
-      return false;
-    });
+    updateWeapon(this, tank, input, SIM_DT);
   }
 }

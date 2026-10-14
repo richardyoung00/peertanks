@@ -133,10 +133,13 @@ Mortars and thrown grenades fly over terrain.
 | Bouncy cannon | Straight shot, bounces 3 times | 25 | 10 |
 | Laser | Instant, reflects 3 times, beam effect | 40 | 5 |
 | Rocket | Fast straight shot, explodes on contact | 100 inner / falloff | 4 |
-| Grenade | **Hold the mouse button to charge the throw (up to 3 s = furthest).** Bounces off terrain, 2 s fuse. A charge meter shows how far it will go | 100 inner / falloff | 3 |
-| Mortar | High arc to the cursor spot, flies over terrain, a shadow marks the landing spot | 100 inner / falloff | 3 |
+| Grenade | **Hold the mouse button to charge the throw (up to 3 s = furthest).** Hard throws arc high enough to sail over walls and trees; then it rolls and bounces, 2 s fuse. A charge bar shows under your name tag, but there's no landing hint: judging the throw is part of the skill | 100 inner / falloff | 3 |
+| Mortar | High arc to the cursor spot, flies over terrain. The shooter sees a target ring; nobody gets a danger-zone warning | 100 inner / falloff | 3 |
 
 - **Switching weapons:** keys 1–7 or the mouse wheel. Cannon is always slot 1.
+- **Cooldowns:** each weapon has its own minimum time between shots, longer for stronger weapons (machine gun 0.08 s up to mortar 2 s). Switching weapons doesn't reset them. No visual indicator.
+- **Own explosions hurt you** at full damage; a self-kill is a death with nobody scoring. Ricochets and lasers can hit you after their first bounce.
+- **Dying loses all collected weapons.** Picking up a weapon you don't have switches to it; one you already have just adds ammo (up to two pickups' worth).
 
 ### Powerups (starting values, all in the config file)
 
@@ -151,7 +154,8 @@ An active powerup shows on the tank, so other players can see it.
 
 ### Pickups
 
-- Weapons and powerups appear at **spots placed in the map**. A spot fills again a set time after it's collected; the time comes from the map, or the config default.
+- Weapons and powerups appear at **spots placed in the map**, as small floating models of the item itself. There are no labels, and nothing marks an empty spot.
+- A spot fills again a set time after it's collected; the time comes from the map, or the config default.
 - Each spot either picks randomly from **everything**, or from a **subset** listed in the map, e.g. "rocket, grenade, mortar" for a heavy-weapons spot.
 - The host's allowed list (see §7) filters this further: a disabled weapon never spawns. A spot whose whole subset is disabled stays empty.
 
@@ -313,12 +317,12 @@ Each milestone ends with something playable to check.
    - always-visible scoreboard with K/D and streaks
    - event feed (kills, joins, leaves)
    - version check on join, build label
-4. **Weapons, powerups and pickups:**
+4. ✅ **Weapons, powerups and pickups:**
    - all 7 weapons, including the hold-to-charge grenade
    - 4 powerups
    - map pickup spots with subsets and respawn timers
    - weapon switching
-   - predicted shells
+   - predicted shells (still to do; moved to milestone 7)
 
    Until the lobby exists, every weapon and powerup is allowed.
 5. **Lobby and game menus:**
