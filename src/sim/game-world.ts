@@ -5,7 +5,7 @@ import { killIfOnHazard, respawnTank, updateLifeTimers } from './combat';
 import { explode } from './explosions';
 import type { DeathCause, GameEvent } from './game-events';
 import type { GameMap } from './game-map';
-import { ITEM_IDS, type ItemId } from './items';
+import type { GameSettings } from './game-settings';
 import { createPhysicsWorld } from './physics';
 import { PickupField } from './pickups';
 import { IDLE_INPUT, type PlayerInput } from './player-input';
@@ -22,7 +22,7 @@ export class GameWorld implements WorldContext {
   readonly physics: RAPIER.World;
   readonly tanks = new Map<string, Tank>();
   readonly scores = new Scoreboard();
-  readonly round = new RoundClock();
+  readonly round: RoundClock;
   readonly pickups: PickupField;
   projectiles: Projectile[] = [];
   tick = 0;
@@ -31,13 +31,25 @@ export class GameWorld implements WorldContext {
   private nextProjectileId = 1;
   private tanksByColliderHandle = new Map<number, Tank>();
 
+  private nextRoundSettings: GameSettings | null = null;
+
   constructor(
     readonly map: GameMap,
-    allowedItems: readonly ItemId[] = ITEM_IDS,
+    private settings: GameSettings,
   ) {
     this.physics = createPhysicsWorld(map);
-    this.pickups = new PickupField(map, allowedItems);
+    this.round = new RoundClock(settings.roundSeconds);
+    this.pickups = new PickupField(map, settings.allowedItems);
     this.pickups.fillAll();
+  }
+
+  get currentSettings(): GameSettings {
+    return this.nextRoundSettings ?? this.settings;
+  }
+
+  /** New round length and allowed items take effect when the next round starts. */
+  changeSettings(settings: GameSettings): void {
+    this.nextRoundSettings = settings;
   }
 
   addTank(id: string, name: string, color: number): Tank {
@@ -112,11 +124,21 @@ export class GameWorld implements WorldContext {
   }
 
   private startNewRound(): void {
+    this.applyPendingSettings();
+    this.round.restart();
     this.scores.reset();
     this.projectiles = [];
     this.pickups.fillAll();
     for (const tank of this.tanks.values()) respawnTank(this, tank);
     this.emit({ type: 'roundStarted' });
+  }
+
+  private applyPendingSettings(): void {
+    if (!this.nextRoundSettings) return;
+    this.settings = this.nextRoundSettings;
+    this.nextRoundSettings = null;
+    this.round.roundSeconds = this.settings.roundSeconds;
+    this.pickups.setAllowed(this.settings.allowedItems);
   }
 
   private applyInput(tank: Tank, input: PlayerInput): void {

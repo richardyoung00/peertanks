@@ -6,96 +6,134 @@ import { openFastChannel, sendIfOpen } from './fast-channel';
 import { isHostMessage, type ClientMessage, type HostMessage, type JoinMetadata } from './messages';
 import { decodePacket, encodeInputPacket, type InputFrame, type Snapshot } from './packets';
 import { closeOnPageExit, hostPeerId, openClientPeer } from './peer';
+import { StallGuard } from './stall-guard';
 import { rejectionMessage } from './version-check';
 
 export type WelcomeMessage = Extract<HostMessage, { type: 'welcome' }>;
+export type LobbyMessage = Extract<HostMessage, { type: 'lobby' }>;
 
 export interface ClientSessionListener {
-  onSnapshot(snapshot: Snapshot): void;
   onMessage(message: HostMessage): void;
-  onPing(roundTripMs: number): void;
   onDisconnected(reason: string): void;
+  onSnapshot?(snapshot: Snapshot): void;
+  onPing?(roundTripMs: number): void;
 }
 
-/** A joining player's side of the network: sends inputs to the host and receives the game state. */
+const HOST_LEFT = 'The host left the game.';
+const CONNECTION_LOST = 'Lost connection to the host.';
+const KICKED = 'The host removed you from the game.';
+const GAME_ENDED = 'The host ended the game.';
+
+/**
+ * A joining player's side of the network. Messages are held until someone is listening, so nothing is lost
+ * while switching between the lobby and the game. The fast channel only opens once the game starts.
+ */
 export class ClientSession {
   private listener: ClientSessionListener | null = null;
+  private heldMessages: HostMessage[] = [];
+  private fastChannel: RTCDataChannel | null = null;
+  private lastSnapshotAt = 0;
+  private disconnectReason: string | null = null;
+  private readonly stallGuard = new StallGuard(NETWORK.pingIntervalMs);
 
   private constructor(
-    private readonly peer: Peer,
+    peer: Peer,
     private readonly connection: DataConnection,
-    private readonly fastChannel: RTCDataChannel,
-    private messagesBeforeStart: unknown[],
   ) {
-    connection.on('data', (data) => {
-      if (this.listener) this.handleMessage(data);
-      else this.messagesBeforeStart.push(data);
-    });
+    connection.on('data', (data) => this.receive(data));
+    connection.on('close', () => this.disconnect(HOST_LEFT));
+    peer.on('error', () => this.disconnect(CONNECTION_LOST));
+    setInterval(() => this.heartbeat(), NETWORK.pingIntervalMs);
+    closeOnPageExit(peer);
   }
 
-  static async join(code: string, name: string): Promise<{ session: ClientSession; welcome: WelcomeMessage }> {
+  /** Connects and waits for the host to either send us to the lobby or straight into the game. */
+  static async join(code: string, name: string): Promise<{ session: ClientSession; first: WelcomeMessage | LobbyMessage }> {
     const peer = await openClientPeer();
     try {
       const metadata: JoinMetadata = { name, build: BUILD };
       const connection = peer.connect(hostPeerId(code), { reliable: true, serialization: 'json', metadata });
-
-      // The host may send more messages before we're ready to handle them, so keep everything.
-      const earlyMessages: unknown[] = [];
-      const collect = (data: unknown) => earlyMessages.push(data);
-      connection.on('data', collect);
-      const welcomeArrival = waitForWelcome(connection);
-      welcomeArrival.catch(() => {});
-
+      const session = new ClientSession(peer, connection);
       await waitForConnection(peer, connection);
-      // Wait for the welcome first so a rejection (full game, version mismatch) shows straight away.
-      const welcome = await welcomeArrival;
-      const fastChannel = await openFastChannel(connection.peerConnection);
-      connection.off('data', collect);
-
-      const laterMessages = earlyMessages.filter((message) => message !== welcome);
-      return { session: new ClientSession(peer, connection, fastChannel, laterMessages), welcome };
+      const first = await session.waitForEntry();
+      return { session, first };
     } catch (error) {
       peer.destroy();
       throw error;
     }
   }
 
-  start(listener: ClientSessionListener): void {
+  setListener(listener: ClientSessionListener): void {
     this.listener = listener;
-    this.messagesBeforeStart.forEach((data) => this.handleMessage(data));
-    this.messagesBeforeStart = [];
-    let lastSnapshotAt = performance.now();
-    this.fastChannel.addEventListener('message', (event: MessageEvent<ArrayBuffer>) => {
+    const held = this.heldMessages;
+    this.heldMessages = [];
+    held.forEach((message) => listener.onMessage(message));
+    if (this.disconnectReason) listener.onDisconnected(this.disconnectReason);
+  }
+
+  /** Stop delivering messages for now; they're held for the next listener. */
+  pauseListener(): void {
+    this.listener = null;
+  }
+
+  async openFastChannel(): Promise<void> {
+    const channel = await openFastChannel(this.connection.peerConnection);
+    this.lastSnapshotAt = performance.now();
+    channel.addEventListener('message', (event: MessageEvent<ArrayBuffer>) => {
       const packet = decodePacket(event.data);
       if (packet?.type !== 'snapshot') return;
-      lastSnapshotAt = performance.now();
-      listener.onSnapshot(packet.snapshot);
+      this.lastSnapshotAt = performance.now();
+      this.listener?.onSnapshot?.(packet.snapshot);
     });
-
-    let disconnected = false;
-    const disconnect = (reason: string) => {
-      if (disconnected) return;
-      disconnected = true;
-      listener.onDisconnected(reason);
-    };
-
-    this.connection.on('close', () => disconnect('The host left the game.'));
-    this.peer.on('error', () => disconnect('Lost connection to the host.'));
-    setInterval(() => {
-      this.send({ type: 'ping', sentAt: performance.now() });
-      if (performance.now() - lastSnapshotAt > NETWORK.silenceTimeoutMs) disconnect('Lost connection to the host.');
-    }, NETWORK.pingIntervalMs);
-    closeOnPageExit(this.peer);
+    this.fastChannel = channel;
   }
 
   sendInputs(frames: InputFrame[]): void {
-    sendIfOpen(this.fastChannel, encodeInputPacket(frames));
+    if (this.fastChannel) sendIfOpen(this.fastChannel, encodeInputPacket(frames));
   }
 
-  private handleMessage(data: unknown): void {
-    if (!isHostMessage(data) || !this.listener) return;
-    if (data.type === 'pong') this.listener.onPing(performance.now() - data.sentAt);
-    else this.listener.onMessage(data);
+  private waitForEntry(): Promise<WelcomeMessage | LobbyMessage> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('The host did not respond.')), NETWORK.connectTimeoutMs);
+      const finish = (outcome: () => void) => {
+        clearTimeout(timeout);
+        this.pauseListener();
+        outcome();
+      };
+      this.setListener({
+        onMessage: (message) => {
+          if (message.type === 'welcome' || message.type === 'lobby') finish(() => resolve(message));
+          else if (message.type === 'rejected') finish(() => reject(new Error(rejectionMessage(message))));
+        },
+        onDisconnected: (reason) => finish(() => reject(new Error(reason))),
+      });
+    });
+  }
+
+  private receive(data: unknown): void {
+    if (!isHostMessage(data)) return;
+    if (data.type === 'pong') return this.listener?.onPing?.(performance.now() - data.sentAt);
+    if (data.type === 'kicked') return this.disconnect(KICKED);
+    if (data.type === 'gameEnded') return this.disconnect(GAME_ENDED);
+    if (this.listener) this.listener.onMessage(data);
+    else this.heldMessages.push(data);
+  }
+
+  private heartbeat(): void {
+    this.send({ type: 'ping', sentAt: performance.now() });
+    if (this.stallGuard.wasStalled()) {
+      this.lastSnapshotAt = performance.now();
+      return;
+    }
+    const silent = this.fastChannel && performance.now() - this.lastSnapshotAt > NETWORK.silenceTimeoutMs;
+    if (silent) this.disconnect(CONNECTION_LOST);
+  }
+
+  /** Only the first reason counts: a kick is followed by the connection closing, and that's not news. */
+  private disconnect(reason: string): void {
+    if (this.disconnectReason) return;
+    this.disconnectReason = reason;
+    this.listener?.onDisconnected(reason);
   }
 
   private send(message: ClientMessage): void {
@@ -122,23 +160,5 @@ function waitForConnection(peer: Peer, connection: DataConnection): Promise<void
     // A failed ICE negotiation is reported on the connection rather than the peer.
     connection.once('error', () => fail(new Error(DIRECT_CONNECTION_FAILED)));
     peer.once('error', fail);
-  });
-}
-
-function waitForWelcome(connection: DataConnection): Promise<WelcomeMessage> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('The host did not respond.')), NETWORK.connectTimeoutMs);
-    const handleData = (data: unknown) => {
-      if (!isHostMessage(data)) return;
-      if (data.type === 'welcome') {
-        clearTimeout(timeout);
-        connection.off('data', handleData);
-        resolve(data);
-      } else if (data.type === 'rejected') {
-        clearTimeout(timeout);
-        reject(new Error(rejectionMessage(data)));
-      }
-    };
-    connection.on('data', handleData);
   });
 }

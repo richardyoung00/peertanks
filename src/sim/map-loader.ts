@@ -49,6 +49,27 @@ const OBJECTS_LAYER = 'objects';
 const TILED_FLIP_FLAGS_MASK = 0x1fffffff;
 const MAX_MAP_SIZE = 100;
 
+export interface MapListing {
+  id: string;
+  name: string;
+}
+
+// A function rather than a constant, so the simulation can load in tests that run outside Vite.
+function mapsFolder(): string {
+  return `${import.meta.env.BASE_URL}maps/`;
+}
+
+/** The maps a host can choose from, listed in public/maps/index.json. */
+export async function fetchMapList(): Promise<MapListing[]> {
+  const response = await fetch(`${mapsFolder()}index.json`);
+  if (!response.ok) throw new Error(`Could not load the map list (${response.status})`);
+  return response.json();
+}
+
+export function fetchMapById(id: string): Promise<GameMap> {
+  return fetchMap(`${mapsFolder()}${encodeURIComponent(id)}.json`);
+}
+
 export async function fetchMap(url: string): Promise<GameMap> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not load map ${url} (${response.status})`);

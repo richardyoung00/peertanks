@@ -2,11 +2,14 @@ import { startGameLoop } from '../game-loop';
 import { GAMEPLAY } from '../gameplay-config';
 import { ClientSession, type ClientSessionListener } from '../net/client-session';
 import { ClientGameState } from '../net/client-state';
+import { HOST_PLAYER_ID } from '../net/messages';
 import { joinLink } from '../net/peer';
 import { GameView } from '../render/game-view';
+import { GameMenu } from '../ui/game-menu';
 import { showHud, showInvitePanel, updateStatusPanel } from '../ui/hud';
 import { showNotice } from '../ui/notice';
 import type { PlayerLookup } from '../ui/player-lookup';
+import { waitInLobby } from './client-lobby';
 import { GameHud } from './game-hud';
 import { landingTarget } from './landing-target';
 import { LocalControls } from './local-controls';
@@ -19,18 +22,25 @@ function nowSeconds(): number {
   return performance.now() / 1000;
 }
 
-/** Joins someone else's game: predicts our own tank locally and draws everything else from the host's snapshots. */
+/**
+ * Joins someone else's game, waiting in their lobby first if they haven't started yet. In the game, our own
+ * tank is predicted locally and everything else is drawn from the host's snapshots.
+ */
 export async function startClientGame(name: string, code: string, container: HTMLElement): Promise<void> {
-  const { session, welcome } = await ClientSession.join(code, name);
+  const { session, first } = await ClientSession.join(code, name);
+  showJoinLinkInAddressBar(code);
+  const welcome = first.type === 'welcome' ? first : await waitInLobby(session, first, code);
+  await session.openFastChannel();
+
   const state = new ClientGameState(welcome, welcome.playerId);
   const view = new GameView(container, welcome.map);
   const controls = new LocalControls(container);
   const hud = new GameHud(lookupFromState(state), welcome.playerId);
+  new GameMenu({ localId: welcome.playerId, hostId: HOST_PLAYER_ID, onLeave: returnToMenu });
 
   showHud();
   showInvitePanel(code, joinLink(code));
-  showJoinLinkInAddressBar(code);
-  session.start(createSessionListener(state, view, hud));
+  session.setListener(createSessionListener(state, view, hud));
 
   startGameLoop(
     () => {

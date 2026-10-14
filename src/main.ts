@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   showLoading(false);
 
   const choice = await showMenu(readJoinCodeFromUrl());
-  showLoading(true, choice.mode === 'host' ? 'Starting game…' : 'Joining game…');
+  showLoading(true, choice.mode === 'host' ? 'Opening lobby…' : 'Joining game…');
   const container = element('game');
 
   try {

@@ -8,6 +8,8 @@ import type { Tank } from './tank';
 export interface PickupSpot {
   x: number;
   y: number;
+  /** What the map says this spot can hold. */
+  mapChoices: readonly ItemId[];
   /** What this spot can hold, after the host's allowed list has been applied. */
   choices: ItemId[];
   respawnSeconds: number;
@@ -21,17 +23,21 @@ export class PickupField {
   readonly spots: PickupSpot[];
 
   constructor(map: GameMap, allowedItems: readonly ItemId[] = ITEM_IDS) {
-    this.spots = map.pickups.map((point) => {
-      const candidates = point.items.length > 0 ? point.items : ITEM_IDS;
-      return {
-        x: point.x,
-        y: point.y,
-        choices: candidates.filter((item) => allowedItems.includes(item)),
-        respawnSeconds: point.respawnSeconds ?? GAMEPLAY.pickups.defaultRespawnSeconds,
-        item: null,
-        timer: 0,
-      };
-    });
+    this.spots = map.pickups.map((point) => ({
+      x: point.x,
+      y: point.y,
+      mapChoices: point.items.length > 0 ? point.items : ITEM_IDS,
+      choices: [],
+      respawnSeconds: point.respawnSeconds ?? GAMEPLAY.pickups.defaultRespawnSeconds,
+      item: null,
+      timer: 0,
+    }));
+    this.setAllowed(allowedItems);
+  }
+
+  /** Limits every spot to the allowed items; takes effect as spots next fill. */
+  setAllowed(allowedItems: readonly ItemId[]): void {
+    for (const spot of this.spots) spot.choices = spot.mapChoices.filter((item) => allowedItems.includes(item));
   }
 
   fillAll(): void {

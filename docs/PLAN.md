@@ -79,6 +79,7 @@ tools/
 - The host sends **snapshots** 20 times a second, in compact binary: about 13 bytes per tank and 10 per projectile. With 7 clients the host uploads roughly 45 KB/s.
 - The host sends the whole map in the welcome message, so players can join games on maps they don't have.
 - **Disconnects** are picked up early: closing the tab closes the connection properly. Otherwise a player silent for 5 s is dropped, and a client with no snapshots for 5 s sees "lost connection".
+- **Frozen tabs:** if a page freezes for seconds (e.g. compiling graphics on a slow machine), the next silence check is skipped instead of blaming the network. Joining players also get 15 s before the host gives up on them.
 - **Background tabs:** a worker keeps the simulation ticking while the tab is hidden. A client that goes quiet is treated as idle after 0.25 s, so its tank stops driving.
 
 **Smoothness**
@@ -212,11 +213,12 @@ Bots have names and colours like players, show on the scoreboard, and count towa
   - the round length
   - bots to add (easy/medium/hard)
   - *Start* to begin
-- **In-game menu (host),** opened with Esc:
-  - change settings for the next round
+- **In-game menu (host),** opened with Esc (the game carries on behind it):
+  - change round length and allowed items, applied from the next round
   - kick players, including bots
-  - add bots of any level
-  - end the game
+  - add bots of any level (milestone 6)
+  - end the game, which sends everyone back to the menu
+  - changing the map mid-game isn't supported yet; it's picked in the lobby
 - **In-game menu (others):** just *Leave game*, plus volume settings once there's audio.
 - **HUD:**
   - slim invite bar (top-left) and ping bar (top-right)
@@ -325,7 +327,7 @@ Each milestone ends with something playable to check.
    - predicted shells (still to do; moved to milestone 7)
 
    Until the lobby exists, every weapon and powerup is allowed.
-5. **Lobby and game menus:**
+5. ✅ **Lobby and game menus:**
    - host lobby: map, allowed weapons and powerups, round length, live invite link, start
    - in-game host menu: settings, kick
    - leave menu for other players

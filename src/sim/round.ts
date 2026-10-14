@@ -6,7 +6,12 @@ export type RoundChange = 'ended' | 'started' | null;
 /** Counts down the round, then the results screen, then starts the next round. */
 export class RoundClock {
   phase: RoundPhase = 'playing';
-  timeLeft: number = GAMEPLAY.round.lengthSeconds;
+  timeLeft: number;
+
+  /** The length of the next round to start; the current round keeps its length. */
+  constructor(public roundSeconds: number) {
+    this.timeLeft = roundSeconds;
+  }
 
   get isPlaying(): boolean {
     return this.phase === 'playing';
@@ -21,8 +26,13 @@ export class RoundClock {
       this.timeLeft = GAMEPLAY.round.resultsSeconds;
       return 'ended';
     }
-    this.phase = 'playing';
-    this.timeLeft = GAMEPLAY.round.lengthSeconds;
+    this.restart();
     return 'started';
+  }
+
+  /** Starts a fresh round at the current round length. */
+  restart(): void {
+    this.phase = 'playing';
+    this.timeLeft = this.roundSeconds;
   }
 }
