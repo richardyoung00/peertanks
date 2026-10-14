@@ -1,10 +1,12 @@
 import type Peer from 'peerjs';
 import type { DataConnection } from 'peerjs';
+import { BUILD } from '../build-info';
 import { NETWORK } from '../config';
 import { openFastChannel, sendIfOpen } from './fast-channel';
 import { isHostMessage, type ClientMessage, type HostMessage, type JoinMetadata } from './messages';
 import { decodePacket, encodeInputPacket, type InputFrame, type Snapshot } from './packets';
 import { closeOnPageExit, hostPeerId, openClientPeer } from './peer';
+import { rejectionMessage } from './version-check';
 
 export type WelcomeMessage = Extract<HostMessage, { type: 'welcome' }>;
 
@@ -34,10 +36,10 @@ export class ClientSession {
   static async join(code: string, name: string): Promise<{ session: ClientSession; welcome: WelcomeMessage }> {
     const peer = await openClientPeer();
     try {
-      const metadata: JoinMetadata = { name };
+      const metadata: JoinMetadata = { name, build: BUILD };
       const connection = peer.connect(hostPeerId(code), { reliable: true, serialization: 'json', metadata });
 
-      // The host may send the welcome (and more) before our fast channel is ready, so keep everything.
+      // The host may send more messages before we're ready to handle them, so keep everything.
       const earlyMessages: unknown[] = [];
       const collect = (data: unknown) => earlyMessages.push(data);
       connection.on('data', collect);
@@ -45,8 +47,9 @@ export class ClientSession {
       welcomeArrival.catch(() => {});
 
       await waitForConnection(peer, connection);
-      const fastChannel = await openFastChannel(connection.peerConnection);
+      // Wait for the welcome first so a rejection (full game, version mismatch) shows straight away.
       const welcome = await welcomeArrival;
+      const fastChannel = await openFastChannel(connection.peerConnection);
       connection.off('data', collect);
 
       const laterMessages = earlyMessages.filter((message) => message !== welcome);
@@ -133,7 +136,7 @@ function waitForWelcome(connection: DataConnection): Promise<WelcomeMessage> {
         resolve(data);
       } else if (data.type === 'rejected') {
         clearTimeout(timeout);
-        reject(new Error(data.reason));
+        reject(new Error(rejectionMessage(data)));
       }
     };
     connection.on('data', handleData);

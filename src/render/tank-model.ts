@@ -6,6 +6,11 @@ const RECOIL_DISTANCE = 0.14;
 const RECOIL_RECOVERY = 7;
 const TRACK_COLOR = 0x2c2c2e;
 const BARREL_COLOR = 0x3b3d40;
+const HIT_FLASH_COLOR = new THREE.Color(0xffffff);
+const HIT_FLASH_RECOVERY = 6;
+const HIT_SQUASH = 0.12;
+const SHIELD_COLOR = new THREE.Color(0x7dd3fc);
+const SHIELD_PULSE_SPEED = 12;
 
 interface TankMaterials {
   body: THREE.MeshStandardMaterial;
@@ -20,12 +25,16 @@ export class TankModel {
   private readonly hull = new THREE.Group();
   private readonly turret = new THREE.Group();
   private readonly barrel = new THREE.Group();
+  private readonly materials: TankMaterials;
   private recoil = 0;
+  private hitFlash = 0;
+  private shielded = false;
+  private elapsed = 0;
 
   constructor(color: number) {
-    const materials = createMaterials(color);
-    buildHull(this.hull, materials);
-    buildTurret(this.turret, this.barrel, materials);
+    this.materials = createMaterials(color);
+    buildHull(this.hull, this.materials);
+    buildTurret(this.turret, this.barrel, this.materials);
     this.root.add(this.hull, this.turret);
     this.root.traverse((child) => {
       child.castShadow = true;
@@ -44,11 +53,35 @@ export class TankModel {
     this.recoil = 1;
   }
 
+  flashHit(): void {
+    this.hitFlash = 1;
+  }
+
+  /** Spawn protection shows as a pulsing glow. */
+  setShielded(shielded: boolean): void {
+    this.shielded = shielded;
+  }
+
   update(dt: number): void {
+    this.elapsed += dt;
     this.recoil = Math.max(0, this.recoil - RECOIL_RECOVERY * dt);
-    const eased = this.recoil * this.recoil;
-    this.barrel.position.x = -RECOIL_DISTANCE * eased;
-    this.turret.scale.set(1 + 0.12 * eased, 1 - 0.15 * eased, 1 + 0.12 * eased);
+    this.hitFlash = Math.max(0, this.hitFlash - HIT_FLASH_RECOVERY * dt);
+
+    const recoil = this.recoil * this.recoil;
+    this.barrel.position.x = -RECOIL_DISTANCE * recoil;
+    this.turret.scale.set(1 + 0.12 * recoil, 1 - 0.15 * recoil, 1 + 0.12 * recoil);
+
+    const squash = HIT_SQUASH * this.hitFlash;
+    this.hull.scale.set(1 + squash, 1 - squash, 1 + squash);
+    this.updateGlow();
+  }
+
+  private updateGlow(): void {
+    const shieldPulse = this.shielded ? 0.35 + 0.25 * Math.sin(this.elapsed * SHIELD_PULSE_SPEED) : 0;
+    for (const material of [this.materials.body, this.materials.accent]) {
+      material.emissive.copy(SHIELD_COLOR).lerp(HIT_FLASH_COLOR, this.hitFlash);
+      material.emissiveIntensity = Math.max(shieldPulse, this.hitFlash);
+    }
   }
 }
 

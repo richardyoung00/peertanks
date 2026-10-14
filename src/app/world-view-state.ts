@@ -9,11 +9,15 @@ const { lerp } = THREE.MathUtils;
 export function viewStateFromWorld(world: GameWorld, alpha: number, localTankId: string): ViewState {
   const tanks = [...world.tanks.values()].map((tank) => ({
     id: tank.id,
+    name: tank.name,
     color: tank.color,
     x: lerp(tank.prevX, tank.x, alpha),
     y: lerp(tank.prevY, tank.y, alpha),
     hullAngle: lerpAngle(tank.prevHullAngle, tank.hullAngle, alpha),
     aimAngle: tank.aimAngle,
+    health: tank.health,
+    alive: tank.alive,
+    invulnerable: tank.invulnerableTimer > 0,
   }));
 
   const projectiles = world.projectiles.map((projectile) => ({
@@ -23,6 +27,8 @@ export function viewStateFromWorld(world: GameWorld, alpha: number, localTankId:
     angle: Math.atan2(projectile.vy, projectile.vx),
   }));
 
+  // While dead, the camera holds still until the tank respawns.
   const localTank = tanks.find((tank) => tank.id === localTankId);
-  return { tanks, projectiles, cameraFocus: localTank ? { x: localTank.x, y: localTank.y } : null };
+  const cameraFocus = localTank?.alive ? { x: localTank.x, y: localTank.y } : null;
+  return { tanks, projectiles, cameraFocus };
 }

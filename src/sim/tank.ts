@@ -1,5 +1,5 @@
 import RAPIER from '@dimforge/rapier2d-compat';
-import { TANK } from '../config';
+import { GAMEPLAY } from '../gameplay-config';
 import { rotateTowards, wrapAngle } from './angles';
 import type { MapPoint } from './game-map';
 import { TANK_COLLISION_GROUPS } from './physics';
@@ -18,6 +18,15 @@ export interface Tank {
   prevHullAngle: number;
   aimAngle: number;
   weaponCooldown: number;
+  health: number;
+  alive: boolean;
+  /** Seconds until a dead tank comes back. */
+  respawnTimer: number;
+  /** Seconds of spawn protection left. */
+  invulnerableTimer: number;
+  /** Who last damaged this tank, so they can be credited if it then falls into a hazard. */
+  lastAttackerId: string | null;
+  lastAttackedTimer: number;
 }
 
 /** Kinematic tanks are moved directly rather than by physics; clients use them for other players' tanks. */
@@ -34,7 +43,7 @@ export function createTank(
   const bodyDesc = kind === 'dynamic' ? RAPIER.RigidBodyDesc.dynamic() : RAPIER.RigidBodyDesc.kinematicPositionBased();
   const body = world.createRigidBody(bodyDesc.setTranslation(spawn.x, spawn.y).lockRotations().setLinearDamping(2));
   world.createCollider(
-    RAPIER.ColliderDesc.ball(TANK.radius).setCollisionGroups(TANK_COLLISION_GROUPS).setFriction(0),
+    RAPIER.ColliderDesc.ball(GAMEPLAY.tank.radius).setCollisionGroups(TANK_COLLISION_GROUPS).setFriction(0),
     body,
   );
 
@@ -51,6 +60,12 @@ export function createTank(
     prevHullAngle: 0,
     aimAngle: 0,
     weaponCooldown: 0,
+    health: GAMEPLAY.tank.maxHealth,
+    alive: true,
+    respawnTimer: 0,
+    invulnerableTimer: 0,
+    lastAttackerId: null,
+    lastAttackedTimer: 0,
   };
 }
 
@@ -67,10 +82,10 @@ export function driveTank(tank: Tank, input: PlayerInput, dt: number): void {
   const directionY = length > 0 ? input.moveY / length : 0;
 
   const velocity = tank.body.linvel();
-  const changeX = directionX * TANK.maxSpeed - velocity.x;
-  const changeY = directionY * TANK.maxSpeed - velocity.y;
+  const changeX = directionX * GAMEPLAY.tank.maxSpeed - velocity.x;
+  const changeY = directionY * GAMEPLAY.tank.maxSpeed - velocity.y;
   const changeLength = Math.hypot(changeX, changeY);
-  const maxChange = TANK.acceleration * dt;
+  const maxChange = GAMEPLAY.tank.acceleration * dt;
   const scale = changeLength > maxChange ? maxChange / changeLength : 1;
   tank.body.setLinvel({ x: velocity.x + changeX * scale, y: velocity.y + changeY * scale }, true);
 
@@ -81,7 +96,7 @@ export function driveTank(tank: Tank, input: PlayerInput, dt: number): void {
 function turnHull(tank: Tank, travelAngle: number, dt: number): void {
   const reversing = Math.abs(wrapAngle(travelAngle - tank.hullAngle)) > Math.PI / 2;
   const target = reversing ? travelAngle + Math.PI : travelAngle;
-  tank.hullAngle = wrapAngle(rotateTowards(tank.hullAngle, target, TANK.hullTurnRate * dt));
+  tank.hullAngle = wrapAngle(rotateTowards(tank.hullAngle, target, GAMEPLAY.tank.hullTurnRate * dt));
 }
 
 export function syncTankPosition(tank: Tank): void {

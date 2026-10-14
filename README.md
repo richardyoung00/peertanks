@@ -53,6 +53,10 @@ Game architecture
 - when you are in a game all users should be able to copy a link have have the invite code visible.
 - also update the join hash in the url so that you can copy and paste from the URL bar. 
 
+Vesion handling
+- because of caching it may be possible that 2 players end up on different versions of the game. Build in version numbers into the builds and make it visible on the UI small somewhere.
+- when a player joins it should check its version with the host, if there is a mismatch then an error should be shown. if the joining player is outdated then they should be prevented from joining with an error message explaining how to do a hard refresh, and then try again. If the host is outdated then both the host and joining player should get an error. the joining player should be prevented from joining, the host should get a dismissable warning about being outdated. 
+
 
 Powerups
 - weapons and powerups should spawn at predefined spots on the map after a configrable amount of time. The map should be able to specify if the spot randomly chooses from all available weapons/powerups, or randomly chooses from a subset. 

@@ -1,17 +1,12 @@
 export const SIM_TICK_RATE = 60;
 export const SIM_DT = 1 / SIM_TICK_RATE;
 
-export const TANK = {
-  radius: 0.42,
-  maxSpeed: 4.2,
-  acceleration: 28,
-  hullTurnRate: 9,
-  barrelLength: 0.6,
-};
-
 export const NETWORK = {
-  /** Namespaces our IDs on the shared public PeerJS server. Bump the version on breaking protocol changes. */
-  peerIdPrefix: 'tanks-game-v1-',
+  /**
+   * Namespaces our IDs on the shared public PeerJS server. Never change this: old and new builds must be able
+   * to find each other so the join-time version check can tell players to refresh.
+   */
+  peerIdPrefix: 'peertanks-',
   snapshotEveryTicks: 3,
   interpolationDelay: 0.1,
   pingIntervalMs: 1000,
@@ -31,4 +26,4 @@ export const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.cloudflare.com:3478' },
 ];
 
-export const PLAYER_COLORS =[0x3b82f6, 0xef4444, 0xf59e0b, 0x10b981, 0xa855f7, 0xec4899, 0x14b8a6, 0xf97316];
+export const PLAYER_COLORS = [0x3b82f6, 0xef4444, 0xf59e0b, 0x10b981, 0xa855f7, 0xec4899, 0x14b8a6, 0xf97316];

@@ -61,9 +61,17 @@ tools/
 ## 3. Networking
 
 **Joining**
-- The host's PeerJS ID is `tanks-game-v1-<CODE>`, where CODE is 6 characters with no ambiguous letters (no O/0, I/1).
+- The host's PeerJS ID is `peertanks-<CODE>`, where CODE is 6 characters with no ambiguous letters (no O/0, I/1). The prefix never changes, so any two builds can find each other and run the version check below.
 - The invite link is `…/peertanks/#join=<CODE>`. Every player sees the code and a *Copy link* button in a slim bar in the top-left corner. After joining, the address bar also shows the link.
 - People can join from the lobby or mid-game.
+
+**Version check**
+- Every build is stamped with its version (from `package.json`), git commit and commit time. The build label shows small in the bottom-right corner.
+- The joining player sends their build with the join request, and the host compares commit times:
+  - **Joiner older:** turned away with a message explaining how to do a hard refresh.
+  - **Host older:** the joiner is turned away and told to ask the host to refresh. The host gets a dismissible warning.
+  - **Same:** joins normally.
+- The join request and the rejection reply must keep the same shape forever, so even very old and very new builds can tell each other they don't match.
 
 **Data flow**
 - Clients send **inputs** every tick (60 per second), repeating the last 3 in each packet in case one is lost.
@@ -149,7 +157,7 @@ An active powerup shows on the tank, so other players can see it.
 
 ### Rounds and score
 
-- Free-for-all. Default 3 minutes; the host can change this in the lobby. The highest score wins, a results screen shows for 10 s, then the next round starts.
+- Free-for-all. Default 3 minutes; the host can change this in the lobby. The highest score wins, a results screen shows for 20 s, then the next round starts.
 - Players can join or leave at any time. Leaving and rejoining resets the score.
 - **Scoreboard (always visible, top-right):** a compact list of everyone in the round, bots included, with kills, deaths, kill/death ratio and any current kill streak. It sits under the ping bar and stays narrow, so the middle of the screen stays clear.
 
@@ -211,7 +219,7 @@ Bots have names and colours like players, show on the scoreboard, and count towa
   - scoreboard under the ping bar
   - health bar, current weapon and ammo, weapon slots
   - round timer
-  - kill feed
+  - event feed (bottom-left): kills, plus players joining and leaving
 - **End of round:** results with the winner.
 
 ## 8. Rendering and visuals
@@ -297,13 +305,14 @@ Each milestone ends with something playable to check.
 
 1. ✅ **Scaffold + single player:** project setup, map loading, 3D terrain, tank, movement, aim, cannon.
 2. ✅ **Peer-to-peer:** host/join with codes and links, snapshots, prediction, interpolation, ping, disconnects, Pages deploy.
-3. **Config + combat loop:**
+3. ✅ **Config + combat loop:**
    - the gameplay config file (everything after this uses it)
    - health, damage, name tags with health bars
    - death and respawn, invulnerability
    - kills and deaths, 3-minute rounds, results screen
    - always-visible scoreboard with K/D and streaks
-   - kill feed
+   - event feed (kills, joins, leaves)
+   - version check on join, build label
 4. **Weapons, powerups and pickups:**
    - all 7 weapons, including the hold-to-charge grenade
    - 4 powerups

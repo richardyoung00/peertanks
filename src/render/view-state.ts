@@ -1,11 +1,15 @@
 /** Everything the renderer needs for one frame, already interpolated. Hosts and clients build this differently. */
 export interface TankViewState {
   id: string;
+  name: string;
   color: number;
   x: number;
   y: number;
   hullAngle: number;
   aimAngle: number;
+  health: number;
+  alive: boolean;
+  invulnerable: boolean;
 }
 
 export interface ProjectileViewState {

@@ -1,5 +1,6 @@
 import type Peer from 'peerjs';
 import type { DataConnection } from 'peerjs';
+import { compareWithOurBuild } from '../build-info';
 import { NETWORK } from '../config';
 import type { GameEvent } from '../sim/game-events';
 import type { GameWorld } from '../sim/game-world';
@@ -10,6 +11,7 @@ import { isClientMessage, type HostMessage, type JoinMetadata, type PlayerInfo }
 import { decodePacket, encodeSnapshot } from './packets';
 import { Roster } from './roster';
 import { buildSnapshot } from './snapshot-builder';
+import { OUTDATED_HOST_MESSAGE, OUTDATED_JOINER_MESSAGE, type RejectionCode } from './version-check';
 
 interface RemotePlayer {
   info: PlayerInfo;
@@ -26,12 +28,17 @@ interface RemotePlayer {
 
 export interface HostSessionListener {
   onPlayersChanged(players: PlayerInfo[]): void;
+  onPlayerJoined(player: PlayerInfo): void;
+  onPlayerLeft(player: PlayerInfo): void;
+  /** Someone on a newer build than ours was turned away, so the host should refresh. */
+  onNewerBuildRejected(): void;
 }
 
 /** The host's side of the network: admits players, gathers their inputs and broadcasts the game state. */
 export class HostSession {
   readonly roster = new Roster();
   private readonly remotePlayers = new Map<string, RemotePlayer>();
+  private sentScoresVersion = -1;
 
   constructor(
     peer: Peer,
@@ -61,14 +68,18 @@ export class HostSession {
   broadcastTick(events: GameEvent[]): void {
     if (events.length > 0) this.broadcast({ type: 'events', tick: this.world.tick, events });
     if (this.world.tick % NETWORK.snapshotEveryTicks === 0) this.sendSnapshots();
+    this.broadcastScoresIfChanged();
   }
 
   private async admit(connection: DataConnection): Promise<void> {
-    if (this.roster.isFull) {
-      this.send(connection, { type: 'rejected', reason: 'This game is full.' });
-      setTimeout(() => connection.close(), 500);
-      return;
+    const metadata = connection.metadata as JoinMetadata | undefined;
+    const buildComparison = compareWithOurBuild(metadata?.build);
+    if (buildComparison === 'older') return this.reject(connection, 'client-outdated', OUTDATED_JOINER_MESSAGE);
+    if (buildComparison === 'newer') {
+      this.listener.onNewerBuildRejected();
+      return this.reject(connection, 'host-outdated', OUTDATED_HOST_MESSAGE);
     }
+    if (this.roster.isFull) return this.reject(connection, 'full', 'This game is full.');
 
     let fastChannel: RTCDataChannel;
     try {
@@ -79,7 +90,6 @@ export class HostSession {
       return;
     }
 
-    const metadata = connection.metadata as JoinMetadata | undefined;
     const info = this.roster.add(connection.peer, metadata?.name ?? '');
     const player: RemotePlayer = { info, connection, fastChannel, inputs: new InputQueue(),
       lastHeardAt: performance.now(),
@@ -90,9 +100,22 @@ export class HostSession {
     this.remotePlayers.set(info.id, player);
     this.listenTo(player);
 
-    this.send(connection, { type: 'welcome', playerId: info.id, map: this.world.map, players: this.roster.all });
+    this.send(connection, {
+      type: 'welcome',
+      playerId: info.id,
+      map: this.world.map,
+      players: this.roster.all,
+      scores: this.world.scores.all,
+    });
     this.broadcast({ type: 'playerJoined', player: info }, info.id);
     this.listener.onPlayersChanged(this.roster.all);
+    this.listener.onPlayerJoined(info);
+  }
+
+  private reject(connection: DataConnection, code: RejectionCode, reason: string): void {
+    this.send(connection, { type: 'rejected', reason, code });
+    // Give the message a moment to arrive before hanging up.
+    setTimeout(() => connection.close(), 500);
   }
 
   private listenTo(player: RemotePlayer): void {
@@ -129,6 +152,13 @@ export class HostSession {
     this.roster.remove(id);
     this.broadcast({ type: 'playerLeft', playerId: id });
     this.listener.onPlayersChanged(this.roster.all);
+    this.listener.onPlayerLeft(player.info);
+  }
+
+  private broadcastScoresIfChanged(): void {
+    if (this.world.scores.version === this.sentScoresVersion) return;
+    this.sentScoresVersion = this.world.scores.version;
+    this.broadcast({ type: 'scores', scores: this.world.scores.all });
   }
 
   private sendSnapshots(): void {

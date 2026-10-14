@@ -17,6 +17,9 @@ export function buildSnapshot(world: GameWorld, roster: Roster): Snapshot {
       vy: velocity.y,
       hullAngle: tank.hullAngle,
       aimAngle: tank.aimAngle,
+      health: tank.health,
+      alive: tank.alive,
+      invulnerable: tank.invulnerableTimer > 0,
     });
   }
 
@@ -28,5 +31,6 @@ export function buildSnapshot(world: GameWorld, roster: Roster): Snapshot {
     vy: projectile.vy,
   }));
 
-  return { tick: world.tick, ackSeq: 0, tanks, projectiles };
+  const round = { phase: world.round.phase, timeLeft: world.round.timeLeft };
+  return { tick: world.tick, ackSeq: 0, round, tanks, projectiles };
 }

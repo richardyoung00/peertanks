@@ -12,6 +12,7 @@ export interface Projectile {
   vy: number;
   age: number;
   lifetime: number;
+  damage: number;
 }
 
 export interface ProjectileHit {

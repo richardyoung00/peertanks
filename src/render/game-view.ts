@@ -6,6 +6,7 @@ import { EffectsLayer } from './effects/effect';
 import { createImpactPuff } from './effects/impact-puff';
 import { createMuzzleFlash } from './effects/muzzle-flash';
 import { FollowCamera } from './follow-camera';
+import { NameTags } from './name-tags';
 import { ProjectileView } from './projectile-view';
 import { centreSunOn, createScene, type SceneParts } from './scene-setup';
 import { BARREL_HEIGHT, TankModel } from './tank-model';
@@ -22,6 +23,7 @@ export class GameView {
   private readonly projectileView = new ProjectileView();
   private readonly effects = new EffectsLayer();
   private readonly reticle = createAimReticle();
+  private readonly nameTags: NameTags;
   private elapsed = 0;
 
   constructor(
@@ -33,6 +35,7 @@ export class GameView {
     this.followCamera = new FollowCamera(container.clientWidth / container.clientHeight);
     this.terrain = buildTerrainView(map, theme);
     this.parts.scene.add(this.terrain.object, this.projectileView.object, this.effects.object, this.reticle);
+    this.nameTags = new NameTags(container);
     window.addEventListener('resize', () => this.resize());
   }
 
@@ -53,6 +56,12 @@ export class GameView {
         case 'shellHit':
           this.effects.add(createImpactPuff(event.x, BARREL_HEIGHT, event.y));
           break;
+        case 'tankDamaged':
+          this.tankModels.get(event.tankId)?.flashHit();
+          break;
+        case 'tankKilled':
+          this.showWreck(event.x, event.y);
+          break;
       }
     }
   }
@@ -69,6 +78,7 @@ export class GameView {
     this.effects.update(frameDt);
     this.terrain.update(this.elapsed);
     this.updateReticle(aimPoint);
+    this.nameTags.update(state.tanks, this.followCamera.camera);
     if (state.cameraFocus) this.followCamera.follow(state.cameraFocus.x, state.cameraFocus.y, frameDt);
     centreSunOn(this.parts.sun, this.followCamera.focusX, this.followCamera.focusZ);
     this.parts.renderer.render(this.parts.scene, this.followCamera.camera);
@@ -79,10 +89,18 @@ export class GameView {
     for (const tank of tanks) {
       present.add(tank.id);
       const model = this.tankModels.get(tank.id) ?? this.createTankModel(tank.id, tank.color);
+      model.root.visible = tank.alive;
       model.setPose(tank.x, tank.y, tank.hullAngle, tank.aimAngle);
+      model.setShielded(tank.invulnerable);
       model.update(frameDt);
     }
     this.removeMissingTanks(present);
+  }
+
+  // A placeholder burst until the turret-flying-off death animation in the polish milestone.
+  private showWreck(x: number, y: number): void {
+    this.effects.add(createImpactPuff(x, 0.4, y, { size: 2.5, color: 0xff9a3c }));
+    this.effects.add(createImpactPuff(x, 0.5, y, { size: 3.5, color: 0x4a4a4a }));
   }
 
   private createTankModel(id: string, color: number): TankModel {

@@ -1,6 +1,7 @@
 import { startClientGame } from './app/client-game';
 import { startHostGame } from './app/host-game';
 import { returnToMenu } from './app/navigation';
+import { describeBuild } from './build-info';
 import { describeConnectionError, normaliseJoinCode, readJoinCodeFromUrl } from './net/peer';
 import { initPhysics } from './sim/physics';
 import { element } from './ui/dom';
@@ -8,6 +9,7 @@ import { showMenu } from './ui/menu';
 import { showLoading, showNotice } from './ui/notice';
 
 async function main(): Promise<void> {
+  element('build-version').textContent = describeBuild();
   await initPhysics();
   showLoading(false);
 

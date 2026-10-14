@@ -16,6 +16,15 @@
         <button id="invite-copy" type="button">Copy link</button>
       </div>
       <div id="status-panel" class="panel"></div>
+      <div id="round-timer" class="panel"></div>
+      <div id="scoreboard"></div>
+      <div id="event-feed"></div>
+      <div id="respawn-notice" hidden></div>
+      <div id="results" hidden>
+        <h2 id="results-title"></h2>
+        <table id="results-table"></table>
+        <div id="results-countdown"></div>
+      </div>
       <div id="help">WASD / arrows to move · mouse to aim · click to fire</div>
     </div>
 
@@ -38,7 +47,13 @@
       <button id="notice-action" type="button" class="primary"></button>
     </div>
 
+    <div id="warning-banner" hidden>
+      <span id="warning-message"></span>
+      <button id="warning-dismiss" type="button">Dismiss</button>
+    </div>
+
     <div id="loading" class="screen">Loading…</div>
+    <div id="build-version"></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
