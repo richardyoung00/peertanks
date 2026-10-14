@@ -100,20 +100,25 @@ export class ClientSession {
   }
 }
 
+const DIRECT_CONNECTION_FAILED =
+  "Couldn't connect to the host. One of the networks may be blocking peer-to-peer connections. " +
+  'On a Mac, check your browser is allowed under System Settings → Privacy & Security → Local Network.';
+
 function waitForConnection(peer: Peer, connection: DataConnection): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error('Timed out connecting to the host. Their network may be blocking peer-to-peer traffic.')),
-      NETWORK.connectTimeoutMs,
-    );
+    const fail = (error: Error) => {
+      clearTimeout(timeout);
+      reject(error);
+    };
+    const timeout = setTimeout(() => fail(new Error(DIRECT_CONNECTION_FAILED)), NETWORK.connectTimeoutMs);
+
     connection.once('open', () => {
       clearTimeout(timeout);
       resolve();
     });
-    peer.once('error', (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
+    // A failed ICE negotiation is reported on the connection rather than the peer.
+    connection.once('error', () => fail(new Error(DIRECT_CONNECTION_FAILED)));
+    peer.once('error', fail);
   });
 }
 

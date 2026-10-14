@@ -22,7 +22,7 @@ Game idea:
 - weapon ideas:
     - basic cannon that fires a projectile slowy in a straight line, dissappears on contact with terrain or player.
     - rocket that fires in straight line, explodes on contact causing area damage.
-    - genade that can be thrown, bounces off terrain, cursor distance from the tank in the center determines force of the throw.
+    - genade that can be thrown, bounces off terrain, distance thrown is determined by how long you hold the mouse button down. Max of 3 seconds throws it furthest disance.
     - mortars that can fly over terrain.
     - lasers that fire instantly in a straight line and bounce 3 times.
     - cannon with bouncy bullets that fly in a straigh line and bounce 3 times.
@@ -49,16 +49,33 @@ Game architecture
 
 - make sure the sprites, textures and other assets are all similar visually so that the visual theme of the game is consistent.
 - make sure the physics engine adds to the gameplay, the physics does not need to be completely realistic, but should be intuitive.
+- when users leave or become unresponsive due to technical or network issues we should handle that and pick it up early.
 
 
 Powerups
-- weapons and powerups should spawn randomly around the map 
+- weapons and powerups should spawn at predefined spots on the map after a configrable amount of time. The map should be able to specify if the spot randomly chooses from all available weapons/powerups, or randomly chooses from a subset. 
 - powerups are things that temporarily modify the player for a short time, eg
     - shield: reduced damage taken for 20 seconds
     - speedup movement for a short time
     - increased damage for a short time
     - explode on death, causing splash damage
 
+Configuration
+- there should be a global gameplay config file. This file can be read at compile time, it doesnt need to be dynamic. It should contain all the metrics that can be changed to balance gameplay, such as the speed and damage of each weapon, splash radius and splash damage of each weapon, movement speed, respawn time, any metrics associated with powerups, default round time etc. 
+
+AI Bots
+- there should be AI bots that can be added to a round. They can be added either before a round start, or added/removed from the hosts in game menu. Look up some strageties for how these AI bots can function so that they play like human players. Determine some parameters that will influence their skill level and playing style, and allow these to be randomised within certain limits to create different personalities. The host should be able to add easy, medium or hard bots. The bounds for the skill parameters should be changable in the config file so we can tweak it.   
+
+Game menu
+- The host game menu should allow the host to choose a map, as well as what weapons and powerups are allowed in the map. The list of weapons should filter what spawns on the map.
+- The host can also add bots from this menu.
+- While in this menu the join link should already be available to that people can join, and be visible in the lobby before the game starts, however people can join mid game as well.
+- the host can change the default round length here ass well.
+- once a game has started the host should have a game menu that allows certain game settings to be changed. They should be able to kick people (including bots) and add new bots at varying difficulty levels.
+- the game menu should be different for people who are not the host. It should perhaps just have a leave game button.
+
+Game score
+- The current game score should be visible in the top corner showing who all is in the round (including bots) and their kill/death ratio and any kill streak. 
 
 Credits
 - Announcer voice lines generated with ElevenLabs (elevenlabs.io), free tier, non-commercial use.

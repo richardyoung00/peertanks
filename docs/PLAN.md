@@ -100,7 +100,8 @@ tools/
 - STUN servers are listed in `config.ts`. TURN servers can be added there (e.g. Metered Open Relay free tier, 20 GB/month). TURN credentials would be visible in the shipped code.
 - If a connection fails or times out, the player sees a clear message suggesting what to try.
 - ~~**To verify early:** PeerJS's `reliable: false` only turns off ordering, not retransmission.~~ Confirmed, and solved with the fast channel above. Trystero stays the fallback if the PeerJS public signalling server becomes unreliable.
-- PeerJS's free public TURN servers are included by default.
+- **TURN status (Oct 2026):** the free no-signup relays (PeerJS's own, Open Relay static auth) are offline, so there's no relay for now. Direct connections via STUN cover most home networks. If players on strict networks can't connect, add ExpressTURN (1,000 GB/month free) or Metered (20 GB/month, ports 80/443 + TLS). Both need a free signup; credentials would come from `.env` / a GitHub Actions secret at build time.
+- On macOS, a browser without the **Local Network** permission can't connect directly to players on the same network. The error message points players to that setting.
 
 ## 4. Simulation
 

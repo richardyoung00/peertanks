@@ -22,17 +22,13 @@ export const NETWORK = {
   inputRedundancy: 3,
 };
 
-// STUN finds each player's public address; TURN relays traffic when a direct connection is impossible.
-// The PeerJS TURN servers are free public ones. Add your own TURN entry here if players struggle to connect;
-// note that anything added here ships in the public JavaScript.
+// STUN finds each player's public address so they can connect directly; that covers most home networks.
+// There is deliberately no TURN relay yet: the free no-signup ones (PeerJS, Open Relay static auth) are offline.
+// If players on strict networks can't connect, add a TURN entry here (e.g. ExpressTURN or Metered, both need
+// a free signup). Anything added here ships in the public JavaScript.
 export const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
-  {
-    urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'],
-    username: 'peerjs',
-    credential: 'peerjsp',
-  },
 ];
 
 export const PLAYER_COLORS =[0x3b82f6, 0xef4444, 0xf59e0b, 0x10b981, 0xa855f7, 0xec4899, 0x14b8a6, 0xf97316];
