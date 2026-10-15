@@ -1,4 +1,5 @@
 import type { PlayerInfo } from '../net/messages';
+import { botBadge } from './bot-badge';
 import { cssColor } from './player-lookup';
 
 export interface PlayerListOptions {
@@ -21,6 +22,7 @@ function playerRow(player: PlayerInfo, options: PlayerListOptions): HTMLElement 
   name.className = 'player-name';
   name.textContent = player.name;
   row.append(dot, name);
+  if (player.bot) row.appendChild(botBadge(player.bot, true));
 
   const tags = [player.id === options.hostId ? 'host' : '', player.id === options.localId ? 'you' : ''].filter(Boolean);
   if (tags.length > 0) {
@@ -33,8 +35,10 @@ function playerRow(player: PlayerInfo, options: PlayerListOptions): HTMLElement 
   if (options.onKick && player.id !== options.localId) {
     const kick = document.createElement('button');
     kick.type = 'button';
-    kick.className = 'small danger';
-    kick.textContent = 'Kick';
+    kick.className = 'kick-button';
+    kick.textContent = '✕';
+    kick.title = `Kick ${player.name}`;
+    kick.setAttribute('aria-label', `Kick ${player.name}`);
     kick.onclick = () => options.onKick?.(player.id);
     row.appendChild(kick);
   }

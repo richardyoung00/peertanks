@@ -1,6 +1,9 @@
 import type { MenuArt } from '../app/menu-art';
+import type { BotLevel } from '../bots/bot-level';
+import { NETWORK } from '../config';
 import type { PlayerInfo } from '../net/messages';
 import type { GameSettings } from '../sim/game-settings';
+import { renderAddBotButtons } from './add-bot-buttons';
 import { renderControlsGuide } from './controls-guide';
 import { element } from './dom';
 import { renderPlayerList } from './player-list';
@@ -9,6 +12,7 @@ import { renderSettingsForm } from './settings-form';
 export interface HostMenuControls {
   onSettingsChange(settings: GameSettings): void;
   onKick(playerId: string): void;
+  onAddBot(level: BotLevel): void;
   onEndGame(): void;
 }
 
@@ -75,6 +79,8 @@ export class GameMenu {
       hostId: this.options.hostId,
       onKick: host?.onKick,
     });
+    const addBots = host ? { full: this.players.length >= NETWORK.maxPlayers, onAdd: host.onAddBot } : null;
+    renderAddBotButtons(element('game-menu-add-bots'), addBots);
     if (!this.settings) return;
     renderSettingsForm(element('game-menu-settings'), this.settings, {
       maps: this.options.art.maps,

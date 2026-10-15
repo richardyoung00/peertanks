@@ -1,6 +1,9 @@
 import type { MenuArt } from '../app/menu-art';
+import type { BotLevel } from '../bots/bot-level';
+import { NETWORK } from '../config';
 import type { PlayerInfo } from '../net/messages';
 import type { GameSettings } from '../sim/game-settings';
+import { renderAddBotButtons } from './add-bot-buttons';
 import { renderControlsGuide } from './controls-guide';
 import { makeCopyLinkButton } from './copy-link';
 import { element } from './dom';
@@ -17,6 +20,8 @@ export interface LobbyOptions {
   /** Only the host can change settings and start; everyone else just waits. */
   isHost: boolean;
   onSettingsChange?(settings: GameSettings): void;
+  onAddBot?(level: BotLevel): void;
+  onKick?(playerId: string): void;
   onStart?(): void;
   onLeave(): void;
 }
@@ -41,7 +46,10 @@ export class LobbyScreen {
   }
 
   update(players: PlayerInfo[], settings: GameSettings): void {
-    renderPlayerList(element('lobby-players'), players, { localId: this.options.localId, hostId: this.options.hostId });
+    const { localId, hostId, onAddBot, onKick } = this.options;
+    renderPlayerList(element('lobby-players'), players, { localId, hostId, onKick });
+    const addBots = onAddBot ? { full: players.length >= NETWORK.maxPlayers, onAdd: onAddBot } : null;
+    renderAddBotButtons(element('lobby-add-bots'), addBots);
     renderSettingsForm(element('lobby-settings'), settings, {
       maps: this.options.art.maps,
       itemThumbnails: this.options.art.itemThumbnails,

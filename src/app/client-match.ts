@@ -159,6 +159,7 @@ export class ClientMatch {
     return {
       name: (id) => this.state.player(id)?.name ?? UNKNOWN_PLAYER_NAME,
       color: (id) => this.state.player(id)?.color ?? 0xffffff,
+      botLevel: (id) => this.state.player(id)?.bot,
     };
   }
 }

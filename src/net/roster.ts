@@ -1,3 +1,4 @@
+import type { BotLevel } from '../bots/bot-level';
 import { NETWORK, PLAYER_COLORS } from '../config';
 import type { PlayerInfo } from './messages';
 
@@ -15,10 +16,15 @@ export class Roster {
     return this.players.size >= NETWORK.maxPlayers;
   }
 
-  add(id: string, name: string): PlayerInfo {
-    const player = { id, name: cleanName(name), netId: this.freeNetId(), color: this.freeColor() };
+  add(id: string, name: string, bot?: BotLevel): PlayerInfo {
+    const player: PlayerInfo = { id, name: cleanName(name), netId: this.freeNetId(), color: this.freeColor() };
+    if (bot) player.bot = bot;
     this.players.set(id, player);
     return player;
+  }
+
+  get(id: string): PlayerInfo | undefined {
+    return this.players.get(id);
   }
 
   remove(id: string): void {

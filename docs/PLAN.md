@@ -41,15 +41,16 @@ Three layers that only talk through plain data:
 src/
   main.ts                 entry: menu → host or join
   config.ts               engine/network settings (tick rate, ICE servers, timeouts)
-  gameplay-config.ts      all balance numbers (see §4)            [planned]
+  gameplay-config.ts      all balance numbers, including bot skill and style bounds (see §4)
   app/                    host-game, client-game, local controls, navigation
   sim/                    game world, map loading, physics, tanks, projectiles, weapons/
-  bots/                   bot brain, perception, navigation, personalities   [planned]
+  bots/                   bot brain, perception, navigation, aim, personalities
   net/                    peer setup, host/client sessions, packets, prediction, interpolation
   render/                 scene, camera, tank model, terrain/, themes/, effects/
   input/                  keyboard (screen-relative), mouse → ground-plane aim
   ui/                     menu, HUD, notices; lobby, game menu, scoreboard [planned]
   audio/                  SFX player, announcer queue                       [planned]
+tests/                    Vitest simulation tests (npm test), incl. headless bot matches
 public/
   maps/                   *.json Tiled maps (+ tileset image used only for editing)
   audio/                  sfx/, announcer/                                  [planned]
@@ -168,31 +169,37 @@ An active powerup shows on the tank, so other players can see it.
 
 ## 5. AI bots
 
-Bots can be added in the lobby before a round, or added and kicked from the host's in-game menu. The host picks **easy, medium or hard**. Each bot gets a randomised **personality** within that level's bounds, so two "medium" bots don't play the same.
+Bots can be added in the lobby, or added and kicked from the host's in-game menu. The host picks **easy, medium or hard**. Each bot also gets a random **play style** (archetype), plus random variation on every value, so two "medium" bots don't play the same. Bots run only on the host and send the same input a human would.
 
-**How they work** (to be researched in more detail at the bots milestone). This follows well-proven designs such as the Quake III Arena bot, with a characteristics file per bot and utility-style goal scoring:
-- **Perception, not cheating:** bots only "see" tanks in line of sight (ray casts), remember the last seen position for a while, and react after a delay.
-- **Decisions by scoring options** (utility AI): each tick the bot scores goals such as attack target, collect pickup, retreat to cover, dodge incoming shot, and wander, then picks the best. Its personality changes the weights.
-- **Navigation:** A* pathfinding on the tile grid, avoiding hazards, smoothed so movement looks natural.
-- **Human-like aiming:** aim drifts towards the target rather than snapping, with error that shrinks the longer they track. Imperfect leading of moving targets, occasional over- and under-shooting.
-- **Human-like mistakes:** hesitation, wasted shots, sometimes ignoring a pickup, and not dodging perfectly.
+**What makes them feel human** (from research into the Quake III and Counter-Strike bots, the BotPrize "Turing test for bots" and the "Artificial Stupidity" talk):
+- **Keyboard-like driving:** only the 8 WASD directions, each held for at least 0.15 s. Smooth analogue movement is the quickest giveaway.
+- **Mouse-like aim:** the turret swings onto the target like a spring, overshooting when rushed. The aim error drifts slowly instead of jittering, starts large on a new target and shrinks while tracking.
+- **Reaction time:** a new enemy or incoming shot only registers after the bot's reaction time (humans take about 0.2–0.35 s).
+- **Plausible mistakes:** hesitating, wasted shots, imperfect leading, dodging the wrong way, now and then not watching the edge of the water.
+- **No repetition:** random wander spots, routes and decisions, because BotPrize judges spotted bots within minutes from repeated paths.
+- **Fair play:** easy and medium bots won't join in on a human already fighting 2 bots. Hard bots ignore this.
 
-**Personality parameters** (bounds per level in the config file):
+**How they work** (`src/bots/`):
+- **Perception:** a bot sees roughly one screen around itself, like a player (whose top-down view shows tanks behind walls too). It remembers enemies for 4 s after they leave view, and learns roughly where an attacker is when hit. It only knows what's in a pickup spot if it has seen it.
+- **Decisions (utility AI):** about 10 times a second the bot scores fight, chase, collect pickup, retreat to cover and wander, then picks the best. Its personality weights the scores, and the current plan gets a bonus so it doesn't flicker between choices.
+- **Navigation:** A* on the tile grid. Hazards are never stepped on, and tiles beside them cost extra, more so for careful bots. Routes cut corners where a straight line is clear. A look-ahead check stops the bot driving into water.
+- **Shooting:** leads moving targets, picks the weapon for the range and situation, charges grenades for the right distance, lobs mortars over cover, and finds bank shots off walls for the laser and bouncy cannon.
 
-| Parameter | Effect |
+**Personality** (all bounds in `GAMEPLAY.bots` in the config file):
+
+| Skill (set by level) | Style (set by archetype) |
 |---|---|
-| Reaction time | Delay before noticing and responding to a threat |
-| Aim accuracy | Size of aim error |
-| Aim speed | How fast the turret tracks a target |
-| Leading skill | How well it predicts where a moving target will be |
-| Aggression | Chase and attack vs hang back |
-| Caution | Health level at which it retreats to cover or seeks a shield |
-| Pickup greed | How far it will go out of its way for weapons and powerups |
-| Dodge skill | Chance and quality of dodging incoming shots |
-| Trick-shot use | Willingness to use bounces, lasers off walls and mortars over cover |
-| Hazard awareness | How carefully it stays away from water and lava edges |
+| Reaction time, aim error, aim speed and overshoot, leading, dodging, hazard awareness, trigger discipline, hesitation, trick-shot limit | Aggression, caution (retreat health), pickup greed, vengefulness, trick-shot keenness, preferred range |
 
-Bots have names and colours like players, show on the scoreboard, and count towards the 8-player limit.
+| Archetype | Plays like |
+|---|---|
+| Brawler | Charges in, fights up close, holds grudges, rarely retreats |
+| Sentry | Holds back near cover, fights from range, retreats early |
+| Scavenger | Goes far for pickups, loves powerups |
+| Trickster | Prefers bounce shots, lasers off walls and lobs over cover |
+| All-rounder | Middle of the road |
+
+Bots get tank-themed names and colours like players, show a small level-coloured **Bot** badge on the scoreboard and in the player lists, and count towards the 8-player limit.
 
 ## 6. Maps
 
@@ -218,7 +225,7 @@ Bots have names and colours like players, show on the scoreboard, and count towa
 - **In-game menu (host),** opened with Esc (the game carries on behind it):
   - change round length and allowed items, applied from the next round
   - kick players, including bots
-  - add bots of any level (milestone 6)
+  - add bots of any level
   - end the game, which sends everyone back to the menu
   - the map rotation can be changed too; the new order takes over after the current round
 - **In-game menu (others):** the same players and settings, read-only, plus *Leave game* (and volume settings once there's audio).
@@ -335,7 +342,7 @@ Each milestone ends with something playable to check.
    - host lobby: map, allowed weapons and powerups, round length, live invite link, start
    - in-game host menu: settings, kick
    - leave menu for other players
-6. **AI bots:**
+6. ✅ **AI bots:**
    - perception, decisions, pathfinding, human-like aim
    - easy/medium/hard with randomised personalities
    - add and kick from the lobby and in-game menu

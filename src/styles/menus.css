@@ -58,7 +58,7 @@
 
 .slab-body {
   display: grid;
-  grid-template-columns: 210px 1fr;
+  grid-template-columns: 240px 1fr;
   gap: 26px;
   margin-top: 18px;
 }
@@ -135,6 +135,59 @@
 .player-tag {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.player-list .bot-badge {
+  margin-left: 0;
+  font-size: 11px;
+}
+
+/* A compact round button, so long names still fit beside it. */
+.kick-button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--slab-rim);
+  box-shadow: 0 3px 0 var(--slab-edge);
+  color: var(--cream);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.kick-button:hover {
+  background: var(--brick);
+}
+
+.kick-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--slab-edge);
+}
+
+.add-bots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.add-bots-label {
+  width: 100%;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.add-bots .pill {
+  flex: 1;
+  padding: 7px 0;
+}
+
+.add-bots .pill:disabled {
+  opacity: 0.45;
 }
 
 /* Settings */

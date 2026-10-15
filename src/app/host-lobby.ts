@@ -28,6 +28,8 @@ export function runHostLobby(
         session.updateLobbySettings(settings);
         lobby.update(session.roster.all, settings);
       },
+      onAddBot: (level) => session.addBot(level),
+      onKick: (playerId) => session.kick(playerId),
       onStart: () => {
         lobby.hide();
         resolve(settings);

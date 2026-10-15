@@ -1,3 +1,4 @@
+import type { BotLevel } from '../bots/bot-level';
 import type { BuildInfo } from '../build-info';
 import type { GameEvent } from '../sim/game-events';
 import type { GameMap } from '../sim/game-map';
@@ -16,6 +17,8 @@ export interface PlayerInfo {
   netId: number;
   name: string;
   color: number;
+  /** Set for computer-controlled players, which only exist on the host. */
+  bot?: BotLevel;
 }
 
 export interface JoinMetadata {

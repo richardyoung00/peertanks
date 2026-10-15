@@ -1,3 +1,4 @@
+import { BotSquad } from '../bots/bot-squad';
 import { SIM_DT } from '../config';
 import { startGameLoop } from '../game-loop';
 import type { HostSession } from '../net/host-session';
@@ -37,6 +38,7 @@ export class HostMatch {
   private readonly controls: LocalControls;
   private readonly hud: GameHud;
   private readonly menu: GameMenu;
+  private readonly bots: BotSquad;
 
   constructor(
     private readonly session: HostSession,
@@ -48,6 +50,8 @@ export class HostMatch {
   ) {
     this.rotation = new MapRotation(firstMap.id, art);
     this.world = new GameWorld(firstMap.map, settings);
+    this.bots = new BotSquad(firstMap.map);
+    this.bots.sync(session.roster.all);
     session.startMap(this.world, firstMap.id);
     this.view = this.createView();
     this.controls = new LocalControls(container);
@@ -76,8 +80,10 @@ export class HostMatch {
     const tank = this.tank;
     const inputs = this.session.collectInputs();
     if (tank) inputs.set(tank.id, this.controls.read(this.view, tank));
+    for (const [id, input] of this.bots.inputs(this.world)) inputs.set(id, input);
 
     const events = this.world.step(inputs);
+    this.bots.observe(events, this.world);
     this.view.handleEvents(events);
     this.hud.handleEvents(events, nowSeconds());
     this.reactToEvents(events);
@@ -118,6 +124,7 @@ export class HostMatch {
     const previous = this.world;
     this.world = new GameWorld(next.map, settings, previous.tick + 1);
     previous.dispose();
+    this.bots.changeMap(next.map);
     this.session.startMap(this.world, next.id);
 
     this.view.dispose();
@@ -142,6 +149,7 @@ export class HostMatch {
           this.session.broadcastSettings(settings);
         },
         onKick: (playerId) => this.session.kick(playerId),
+        onAddBot: (level) => this.session.addBot(level),
         onEndGame: () => {
           this.session.endGame();
           setTimeout(returnToMenu, END_GAME_DELAY_MS);
@@ -154,6 +162,7 @@ export class HostMatch {
   private listenToSession(): void {
     this.session.setListener({
       onPlayersChanged: (players) => {
+        this.bots.sync(players);
         updateStatusPanel(players.length, 'host');
         this.menu.update(players, this.world.currentSettings);
       },
@@ -169,6 +178,7 @@ export class HostMatch {
     return {
       name: (id: string) => this.world.tanks.get(id)?.name ?? UNKNOWN_PLAYER_NAME,
       color: (id: string) => this.world.tanks.get(id)?.color ?? 0xffffff,
+      botLevel: (id: string) => this.session.roster.get(id)?.bot,
     };
   }
 }

@@ -1,4 +1,5 @@
 import type { PlayerScore } from '../sim/scores';
+import { botBadge } from './bot-badge';
 import { element } from './dom';
 import { cssColor, type PlayerLookup } from './player-lookup';
 
@@ -33,6 +34,8 @@ export class ScoreboardPanel {
     dot.className = 'score-dot';
     dot.style.background = cssColor(this.players.color(score.playerId));
     name.append(dot, this.players.name(score.playerId));
+    const botLevel = this.players.botLevel(score.playerId);
+    if (botLevel) name.appendChild(botBadge(botLevel, false));
 
     const streak = score.streak >= STREAK_TO_SHOW ? `🔥${score.streak}` : '';
     row.append(name, cell(score.kills), cell(score.deaths), cell(killDeathRatio(score)), cell(streak, 'score-streak'));

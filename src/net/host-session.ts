@@ -1,5 +1,7 @@
 import type Peer from 'peerjs';
 import type { DataConnection } from 'peerjs';
+import type { BotLevel } from '../bots/bot-level';
+import { pickBotName } from '../bots/bot-names';
 import { compareWithOurBuild } from '../build-info';
 import { NETWORK } from '../config';
 import type { GameEvent } from '../sim/game-events';
@@ -51,6 +53,7 @@ export class HostSession {
   private world: GameWorld | null = null;
   private mapId = '';
   private sentScoresVersion = -1;
+  private nextBotNumber = 1;
   private readonly stallGuard = new StallGuard(SILENCE_CHECK_INTERVAL_MS);
 
   constructor(
@@ -96,7 +99,20 @@ export class HostSession {
     this.broadcast({ type: 'settings', settings });
   }
 
+  /** Adds a computer player, if there's room. Bots have no connection: the host plays them itself. */
+  addBot(level: BotLevel): PlayerInfo | null {
+    if (this.roster.isFull) return null;
+    const name = pickBotName(this.roster.all.map((player) => player.name));
+    const info = this.roster.add(`bot-${this.nextBotNumber++}`, name, level);
+    this.welcomeToRoster(info);
+    return info;
+  }
+
   kick(id: string): void {
+    if (this.roster.get(id)?.bot) {
+      this.removeFromRoster(id, 'kicked by the host');
+      return;
+    }
     const player = this.remotePlayers.get(id);
     if (!player) return;
     this.removePlayer(id, 'kicked by the host');
@@ -152,10 +168,15 @@ export class HostSession {
     };
     this.remotePlayers.set(info.id, player);
     this.listenTo(player);
+    this.welcomeToRoster(info);
+  }
 
+  /** Puts a newly added player into the running game (or the lobby) and tells everyone else. */
+  private welcomeToRoster(info: PlayerInfo): void {
     if (this.world) {
       this.world.addTank(info.id, info.name, info.color);
-      this.sendWelcome(player);
+      const remote = this.remotePlayers.get(info.id);
+      if (remote) this.sendWelcome(remote);
       this.broadcast({ type: 'playerJoined', player: info }, info.id);
     } else {
       this.broadcastLobby();
@@ -227,10 +248,14 @@ export class HostSession {
   }
 
   private removePlayer(id: string, reason: string): void {
-    const player = this.remotePlayers.get(id);
-    if (!player) return;
-    console.info(`${player.info.name} left (${reason})`);
-    this.remotePlayers.delete(id);
+    if (!this.remotePlayers.delete(id)) return;
+    this.removeFromRoster(id, reason);
+  }
+
+  private removeFromRoster(id: string, reason: string): void {
+    const info = this.roster.get(id);
+    if (!info) return;
+    console.info(`${info.name} left (${reason})`);
     this.roster.remove(id);
     if (this.world) {
       this.world.removeTank(id);
@@ -239,7 +264,7 @@ export class HostSession {
       this.broadcastLobby();
     }
     this.listener.onPlayersChanged?.(this.roster.all);
-    this.listener.onPlayerLeft?.(player.info);
+    this.listener.onPlayerLeft?.(info);
   }
 
   private broadcastScoresIfChanged(world: GameWorld): void {

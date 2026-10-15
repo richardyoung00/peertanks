@@ -254,6 +254,29 @@ input {
   border-radius: 50%;
 }
 
+/* Bot level colours match the add-bot buttons: green, yellow, red. */
+.bot-badge {
+  flex: none;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  vertical-align: 1px;
+  color: #1b2a1e;
+  background: #93c66e;
+}
+
+.bot-badge.bot-level-medium {
+  background: #f5b83d;
+}
+
+.bot-badge.bot-level-hard {
+  background: #e76a5c;
+}
+
 .score-streak {
   color: #fb923c;
 }

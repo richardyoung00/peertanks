@@ -1,7 +1,10 @@
+import type { BotLevel } from '../bots/bot-level';
+
 /** How the HUD finds a player's display name and colour. Hosts and clients look these up differently. */
 export interface PlayerLookup {
   name(id: string): string;
   color(id: string): number;
+  botLevel(id: string): BotLevel | undefined;
 }
 
 export function cssColor(color: number): string {

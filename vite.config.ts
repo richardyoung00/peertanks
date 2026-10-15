@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
@@ -23,5 +24,10 @@ export default defineConfig({
   base: './',
   define: {
     __BUILD_INFO__: JSON.stringify(buildInfo),
+  },
+  test: {
+    include: ['tests/**/*.test.ts'],
+    environment: 'node',
+    setupFiles: ['tests/setup.ts'],
   },
 });
