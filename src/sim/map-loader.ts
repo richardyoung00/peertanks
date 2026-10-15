@@ -78,7 +78,8 @@ export async function fetchMap(url: string): Promise<GameMap> {
 
 export function parseTiledMap(tiled: TiledMap): GameMap {
   validateSize(tiled);
-  const terrainByGid = buildTerrainLookup(tiled.tilesets);
+  const tilesByGid = buildTileLookup(tiled.tilesets);
+  const gids = readTerrainGids(tiled);
   const objects = findLayer(tiled, OBJECTS_LAYER, 'objectgroup').objects ?? [];
 
   const map: GameMap = {
@@ -86,7 +87,8 @@ export function parseTiledMap(tiled: TiledMap): GameMap {
     theme: stringProperty(tiled.properties, 'theme') ?? 'grassland',
     width: tiled.width,
     height: tiled.height,
-    terrain: readTerrain(tiled, terrainByGid),
+    terrain: gids.map((gid) => tileDefinition(tilesByGid, gid).terrain),
+    variants: gids.map((gid) => tileDefinition(tilesByGid, gid).variant),
     spawns: readSpawns(tiled, objects),
     pickups: readPickups(tiled, objects),
   };
@@ -102,34 +104,42 @@ function validateSize(tiled: TiledMap): void {
   }
 }
 
-function buildTerrainLookup(tilesets: TiledTileset[]): Map<number, TerrainType> {
-  const terrainByGid = new Map<number, TerrainType>();
+interface TileDefinition {
+  terrain: TerrainType;
+  variant: string | null;
+}
+
+const EMPTY_TILE: TileDefinition = { terrain: 'floor', variant: null };
+
+function buildTileLookup(tilesets: TiledTileset[]): Map<number, TileDefinition> {
+  const tilesByGid = new Map<number, TileDefinition>();
   for (const tileset of tilesets) {
     if (tileset.source) throw new Error('External tilesets are not supported; embed the tileset in the map');
     for (const tile of tileset.tiles ?? []) {
       const terrain = stringProperty(tile.properties, 'terrain');
       if (!isTerrainType(terrain)) throw new Error(`Tile ${tile.id} has unknown terrain "${terrain}"`);
-      terrainByGid.set(tileset.firstgid + tile.id, terrain);
+      tilesByGid.set(tileset.firstgid + tile.id, { terrain, variant: stringProperty(tile.properties, 'variant') ?? null });
     }
   }
-  return terrainByGid;
+  return tilesByGid;
 }
 
-function readTerrain(tiled: TiledMap, terrainByGid: Map<number, TerrainType>): TerrainType[] {
+/** The tile ids of the terrain layer, with Tiled's flip flags removed. 0 means no tile (plain floor). */
+function readTerrainGids(tiled: TiledMap): number[] {
   const layer = findLayer(tiled, TERRAIN_LAYER, 'tilelayer');
   if (layer.encoding && layer.encoding !== 'csv') {
     throw new Error('Terrain layer must use CSV encoding');
   }
   const data = layer.data ?? [];
   if (data.length !== tiled.width * tiled.height) throw new Error('Terrain layer size does not match map size');
+  return data.map((rawGid) => rawGid & TILED_FLIP_FLAGS_MASK);
+}
 
-  return data.map((rawGid) => {
-    const gid = rawGid & TILED_FLIP_FLAGS_MASK;
-    if (gid === 0) return 'floor';
-    const terrain = terrainByGid.get(gid);
-    if (!terrain) throw new Error(`Terrain layer uses unknown tile ${gid}`);
-    return terrain;
-  });
+function tileDefinition(tilesByGid: Map<number, TileDefinition>, gid: number): TileDefinition {
+  if (gid === 0) return EMPTY_TILE;
+  const tile = tilesByGid.get(gid);
+  if (!tile) throw new Error(`Terrain layer uses unknown tile ${gid}`);
+  return tile;
 }
 
 function readSpawns(tiled: TiledMap, objects: TiledObject[]): MapPoint[] {

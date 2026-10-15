@@ -1,6 +1,7 @@
 import { GAMEPLAY, type ExplosionConfig } from '../gameplay-config';
 import type { DeathCause, GameEvent, HazardType } from './game-events';
 import { terrainAt, type GameMap } from './game-map';
+import { depthIntoHazard } from './hazard-edge';
 import { clearLoadout, tickPowerups } from './loadout';
 import type { Scoreboard } from './scores';
 import { chooseSpawn } from './spawns';
@@ -36,10 +37,13 @@ export function damageTank(
   if (target.health === 0) killTank(context, target, cause, attackerId);
 }
 
+/** A tank falls in once its centre is far enough past the edge, so clipping a corner over the water is safe. */
 export function killIfOnHazard(context: CombatContext, tank: Tank): void {
   if (!tank.alive) return;
   const terrain = terrainAt(context.map, tank.x, tank.y);
   if (!TERRAIN_RULES[terrain].killsTanks) return;
+  const allowance = GAMEPLAY.hazardEdgeAllowance[terrain as HazardType];
+  if (depthIntoHazard(context.map, tank.x, tank.y) < allowance) return;
 
   const recentAttacker = tank.lastAttackedTimer > 0 ? tank.lastAttackerId : null;
   killTank(context, tank, terrain as HazardType, recentAttacker ?? undefined);

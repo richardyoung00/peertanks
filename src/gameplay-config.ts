@@ -74,6 +74,12 @@ export const GAMEPLAY = {
   /** If you were hit this recently before falling into a hazard, whoever hit you gets the kill. */
   hazardKillCreditSeconds: 4,
 
+  /**
+   * A tank only falls in once its centre is this far (in tiles) past the edge, so it can hang over the bank
+   * a little. Water and lava match roughly where the waterline is drawn; pits have a sheer edge, so less.
+   */
+  hazardEdgeAllowance: { water: 0.25, lava: 0.25, pit: 0.12 },
+
   round: {
     lengthSeconds: 480,
     resultsSeconds: 20,

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glowing } from '../glow';
 import type { Point } from '../../sim/game-events';
 import type { Effect } from './effect';
 
@@ -9,9 +10,9 @@ const glowGeometry = new THREE.CylinderGeometry(0.11, 0.11, 1, 8).rotateZ(Math.P
 
 /** The laser's path as a glowing line that bends at each reflection, then fades. */
 export function createLaserBeam(points: Point[]): Effect {
-  const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffe4e6, transparent: true });
+  const coreMaterial = new THREE.MeshBasicMaterial({ color: glowing(0xffe4e6, 2.5), transparent: true });
   const glowMaterial = new THREE.MeshBasicMaterial({
-    color: 0xf43f5e,
+    color: glowing(0xf43f5e, 1.6),
     transparent: true,
     opacity: 0.45,
     blending: THREE.AdditiveBlending,

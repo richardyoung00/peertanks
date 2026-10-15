@@ -19,6 +19,8 @@ export interface GameMap {
   width: number;
   height: number;
   terrain: TerrainType[];
+  /** Per tile, a named look the map wants (e.g. a "round" tree), or null to let the theme choose. Visual only. */
+  variants: (string | null)[];
   spawns: MapPoint[];
   pickups: PickupPoint[];
 }

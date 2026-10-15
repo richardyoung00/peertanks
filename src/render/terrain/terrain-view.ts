@@ -15,6 +15,12 @@ export interface TerrainView {
 export function buildTerrainView(map: GameMap, theme: Theme): TerrainView {
   const liquids = buildLiquids(map, theme);
   const group = new THREE.Group();
-  group.add(buildFloor(map, theme), buildWalls(map, theme), buildRocks(map, theme), buildTrees(map, theme), liquids.object);
+  group.add(
+    buildFloor(map, theme),
+    buildWalls(map, theme),
+    buildRocks(map, theme),
+    buildTrees(map, theme),
+    liquids.object,
+  );
   return { object: group, update: liquids.update };
 }

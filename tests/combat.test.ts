@@ -54,6 +54,17 @@ describe('combat', () => {
     expect(findEvent(events, 'tankKilled')).toMatchObject({ cause: 'water', killerId: 'a' });
   });
 
+  it('lets a tank hang a little way over the water before it falls in', () => {
+    // Meadow's pond starts at column 2 on row 7; column 1 is grass.
+    const { tanks, events, run } = setupWorld({ b: [2.1, 7.5] });
+    run({}, 2);
+    expect(tanks.b.alive).toBe(true);
+
+    teleportTank(tanks.b, { x: 2.4, y: 7.5 });
+    run({}, 2);
+    expect(findEvent(events, 'tankKilled')).toMatchObject({ cause: 'water' });
+  });
+
   it('gives nobody the kill for an unprovoked lava death', () => {
     const { tanks, events, run } = setupWorld({ b: TARGET });
     teleportTank(tanks.b, LAVA);

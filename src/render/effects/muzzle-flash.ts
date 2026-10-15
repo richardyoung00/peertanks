@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import { glowing } from '../glow';
 import type { Effect } from './effect';
 
 const LIFETIME = 0.09;
 const flashGeometry = new THREE.OctahedronGeometry(0.16, 0);
 
 export function createMuzzleFlash(x: number, y: number, z: number, angle: number): Effect {
-  const material = new THREE.MeshBasicMaterial({ color: 0xffd36b, transparent: true });
+  const material = new THREE.MeshBasicMaterial({ color: glowing(0xffd36b, 2), transparent: true });
   const flash = new THREE.Mesh(flashGeometry, material);
   flash.position.set(x, y, z);
   flash.rotation.y = -angle;

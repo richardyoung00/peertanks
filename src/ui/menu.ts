@@ -1,4 +1,5 @@
 import { element } from './dom';
+import { renderGraphicsToggle } from './graphics-toggle';
 import { loadPlayerName, savePlayerName } from './player-name';
 
 export type MenuChoice = { mode: 'host'; name: string } | { mode: 'join'; name: string; code: string };
@@ -11,6 +12,7 @@ export function showMenu(prefilledCode: string | null): Promise<MenuChoice> {
 
   nameInput.value = loadPlayerName();
   codeInput.value = prefilledCode ?? '';
+  renderGraphicsToggle(element('menu-graphics'));
   menu.hidden = false;
   focusLikelyNextStep(nameInput, prefilledCode !== null);
 

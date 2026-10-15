@@ -14,6 +14,8 @@ const HIT_FLASH_RECOVERY = 6;
 const HIT_SQUASH = 0.12;
 const SHIELD_COLOR = new THREE.Color(0x7dd3fc);
 const SHIELD_PULSE_SPEED = 12;
+const SCORCHED_COLOR = new THREE.Color(0x231d1a);
+const HEAT_COLOR = new THREE.Color(0xff4a12);
 
 interface TankMaterials {
   body: THREE.MeshStandardMaterial;
@@ -25,22 +27,25 @@ interface TankMaterials {
 /** A low-poly tank built from primitives. Local +X is "forward" for both hull and turret. */
 export class TankModel {
   readonly root = new THREE.Group();
-  private readonly hull = new THREE.Group();
-  private readonly turret = new THREE.Group();
+  /** The parts move separately in death animations, e.g. the turret flying off. */
+  readonly hull = new THREE.Group();
+  readonly turret = new THREE.Group();
   private readonly powerups = new PowerupVisuals();
   private readonly materials: TankMaterials;
+  private readonly baseColors: Map<THREE.MeshStandardMaterial, THREE.Color>;
   private barrel: THREE.Group;
-  private weapon: WeaponId = 'cannon';
+  private currentWeapon: WeaponId = 'cannon';
   private recoil = 0;
   private hitFlash = 0;
   private shielded = false;
   private elapsed = 0;
 
-  constructor(color: number) {
+  constructor(readonly color: number) {
     this.materials = createMaterials(color);
+    this.baseColors = new Map(Object.values(this.materials).map((material) => [material, material.color.clone()]));
     buildHull(this.hull, this.materials);
     buildTurret(this.turret, this.materials);
-    this.barrel = buildBarrel(this.weapon, this.materials.barrel);
+    this.barrel = buildBarrel(this.currentWeapon, this.materials.barrel);
     this.turret.add(this.barrel);
     this.root.add(this.hull, this.turret);
     this.root.traverse((child) => {
@@ -50,9 +55,13 @@ export class TankModel {
     this.root.add(this.powerups.object);
   }
 
+  get weapon(): WeaponId {
+    return this.currentWeapon;
+  }
+
   setWeapon(weapon: WeaponId): void {
-    if (weapon === this.weapon) return;
-    this.weapon = weapon;
+    if (weapon === this.currentWeapon) return;
+    this.currentWeapon = weapon;
     this.turret.remove(this.barrel);
     this.barrel = buildBarrel(weapon, this.materials.barrel);
     this.turret.add(this.barrel);
@@ -80,6 +89,29 @@ export class TankModel {
   /** Spawn protection shows as a pulsing glow. */
   setShielded(shielded: boolean): void {
     this.shielded = shielded;
+  }
+
+  /** Blackens the paint, from 0 (as new) to 1 (burnt out). Used by wrecks. */
+  setScorch(amount: number): void {
+    for (const [material, base] of this.baseColors) material.color.copy(base).lerp(SCORCHED_COLOR, amount);
+  }
+
+  /** Makes the whole tank glow red-hot, from 0 to 1. Used by wrecks sinking into lava. */
+  setHeat(amount: number): void {
+    for (const material of this.baseColors.keys()) {
+      material.emissive.copy(HEAT_COLOR);
+      material.emissiveIntensity = amount * 1.4;
+    }
+  }
+
+  /** Frees the hull and turret. Powerup visuals share their shapes with every tank, so they're left alone. */
+  dispose(): void {
+    for (const part of [this.hull, this.turret]) {
+      part.traverse((child) => {
+        if (child instanceof THREE.Mesh) child.geometry.dispose();
+      });
+    }
+    for (const material of this.baseColors.keys()) material.dispose();
   }
 
   update(dt: number): void {

@@ -244,53 +244,33 @@ Bots get tank-themed names and colours like players, show a small level-coloured
 - **Camera:** tilted ~55°, following your tank so it stays centred. While you're dead it holds still, then snaps to your respawn point. No minimap.
 - **Tanks:** low-poly, built in code and tinted in each player's colour. Tracks animate as they move. Each weapon gets its own barrel shape.
 - **Name tags:** each tank shows its player's name and health bar.
-- **Lighting:** one sun with soft shadows plus ambient light. A low-graphics option turns off shadows and bloom.
+- **Lighting:** one sun with soft shadows plus ambient light, and a soft bloom glow on the brightest things (lava cracks, sparks, flames, lasers, muzzle flashes). Only colours brighter than white glow, so the flat-shaded look stays crisp.
+- **Graphics setting:** High / Low, on the main menu and in the Esc menu, saved in the browser. Low turns off shadows and bloom, draws at one pixel per screen pixel, and halves the particles.
 
-### Terrain look (keep the low-poly style, add variety)
+### Terrain look (low-poly, with variety)
 
-- **Trees:** keep the flat-shaded style, with several shapes picked per tile:
-  - pine (stacked cones), as now
-  - round leafy tree (chunky icosahedron canopy)
-  - tall thin conifer
-  - bush cluster
-  - occasionally a stump or dead tree
+- **Trees:** five shapes (pine, round leafy, tall conifer, bush cluster, the odd dead tree), each with random rotation, size, lean and shade. Every shape stands taller than a tank's barrel, because trees block shots.
+- **Rocks:** four shapes (boulder, cluster of 2–3, flat slab, mossy boulder).
+- **Floor:** a soft checkerboard with per-tile colour variation and drifting patches of bare ground and lush grass. There are no scattered decorations: grass tufts, flowers and pebbles were tried and looked out of place.
+- **Themes and variants:** the theme sets which shapes appear and how often. A map tile can force one with a `variant` property next to its `terrain` (e.g. terrain=tree, variant=round).
+- **Water:** one continuous low-poly surface with gentle waves, colour that deepens away from the shore, ripples, sun glints, a broken foam line, and see-through shallows over a sandy bank.
+- **Lava:** a slowly flowing dark crust with thin glowing cracks, a pulsing glow that's brightest at the edge, bubbles that swell and pop, embers rising, and a slight warm tint on nearby ground.
+- **Shorelines:** a smoothed "distance into the liquid" field gives rounded coastlines and a sloped bank (grass → sand → bed for water; grass → scorched ground → thin dark rim for lava). Pits stay square holes.
+- **Fairness rule:** the bank starts exactly at the hazard tile's edge, so the visible waterline is always inside the hazard tile.
 
-  Each tile also gets random rotation, size and lean, plus shade variety from the palette.
-- **Rocks:** more shapes: single boulders (as now), clusters of 2–3, flat slabs, a tall jagged spire, and mossy rocks with a green top.
-- **Grass:**
-  - softer checkerboard, plus per-tile hue and brightness variation
-  - occasional dirt or darker patches
-  - scattered decoration with no collision: grass tufts, small flowers, pebbles
-- **Water** (needs most work):
-  - one continuous animated surface rather than per-tile squares
-  - gentle waves
-  - colour that deepens away from the shore, with light ripples and sparkle highlights
-  - slightly see-through so the bed shows near the edge
-- **Lava** (needs most work):
-  - glowing shader with slowly flowing dark crust and bright cracks
-  - pulsing glow
-  - occasional bubbles that pop
-  - embers rising
-  - a warm orange tint on nearby ground
-- **Shorelines and borders** (currently hard square edges with a straight vertical drop):
-  - **Rounded coastlines:** the liquid outline is traced from the tile grid (marching squares) and smoothed, so ponds have curved, natural edges instead of a staircase.
-  - **Banks:** a sloped bank in place of the straight drop. Water banks get a sand or mud strip, an animated foam line, and the odd reed or pebble. Lava banks get a scorched dark rock rim, glowing edges and charred stones.
-  - **Fairness rule:** gameplay still uses whole tiles. The visual edge always stays inside the hazard tile, so a tank never looks safe while in danger, or in danger while safe.
+### Hazard edges
 
-### Effects and fun
+A tank only falls in once its centre is a little way past the edge (`GAMEPLAY.hazardEdgeAllowance`: a quarter of a tile for water and lava, roughly where the waterline is drawn; less for pits). Clipping a corner over the water is safe.
 
-- muzzle flash and recoil (done)
-- projectile trails
-- particle explosions with shockwave, screen shake and scorch marks
-- glowing laser beam
-- shimmering shield while invulnerable
-- floating damage numbers
-- squash-and-stretch on firing and hits
-- tanks wobble on bumps
-- destroyed tanks pop, with the turret flying off
-- cartoon "boom" puffs
-- the barrel droops while reloading
-- **Hazard death animations:** water means sinking with bubbles and a splash; lava means bobbing, glowing red-hot and melting with smoke and sparks; a pit means falling away with a shrinking tumble.
+### Effects
+
+- muzzle flash, recoil, squash-and-stretch on firing and hits, shimmering shield while invulnerable
+- **Trails:** a glowing streak behind shells and bullets, smoke and flame behind rockets, puffs behind mortar shells and thrown grenades, a sparkle trail on bouncy shots
+- **Explosions:** fireball and shockwave, flames, sparks, bouncing debris, soft smoke, screen shake, and a scorch mark that fades after a few seconds (not on water or lava)
+- **Destroyed tanks:** a burst of flame and debris, the turret flies off spinning and bounces, the hull is left burnt and smoking, then sinks away
+- **Hazard deaths:** the tank tips over the edge it went off, then sinks with a splash and bubbles (water), chars, glows red-hot and melts with smoke and sparks (lava), or tumbles away shrinking (pit)
+- particles are shared pools of instanced meshes, so effects stay cheap
+- **Not planned for now:** floating damage numbers (decided against), tank wobble on bumps, barrel droop while reloading
 
 ## 9. Audio and assets
 
@@ -335,7 +315,7 @@ Each milestone ends with something playable to check.
    - 4 powerups
    - map pickup spots with subsets and respawn timers
    - weapon switching
-   - predicted shells (still to do; moved to milestone 7)
+   - predicted shells (still to do; moved to after milestone 7)
 
    Until the lobby exists, every weapon and powerup is allowed.
 5. ✅ **Lobby and game menus:**
@@ -346,12 +326,12 @@ Each milestone ends with something playable to check.
    - perception, decisions, pathfinding, human-like aim
    - easy/medium/hard with randomised personalities
    - add and kick from the lobby and in-game menu
-7. **Terrain and effects polish:**
+7. ✅ **Terrain and effects polish:**
    - tree, rock and grass variety
    - water and lava shaders
-   - rounded shorelines and banks
-   - explosions and hazard death animations
-   - low-graphics option
+   - rounded shorelines and banks, softer hazard edges
+   - explosions, trails and death animations
+   - bloom and the low-graphics option
 8. **Audio:** sound effects, announcer and volume settings.
 
 ## 12. Risks

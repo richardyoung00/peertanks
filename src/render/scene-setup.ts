@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { GraphicsQuality } from './graphics-quality';
 import type { Theme } from './themes/theme';
 
 const SUN_OFFSET = new THREE.Vector3(-6, 14, -5);
@@ -41,6 +42,20 @@ function createSun(): THREE.DirectionalLight {
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.02;
   return sun;
+}
+
+/** Low quality draws at one pixel per screen pixel and without shadows, which is much cheaper on slow machines. */
+export function applyQuality(parts: SceneParts, quality: GraphicsQuality, width: number, height: number): void {
+  const high = quality === 'high';
+  parts.renderer.setPixelRatio(high ? Math.min(window.devicePixelRatio, 2) : 1);
+  parts.renderer.setSize(width, height);
+  parts.renderer.shadowMap.enabled = high;
+  parts.sun.castShadow = high;
+  // Shadows are built into each material's shader, so they all need rebuilding.
+  parts.scene.traverse((object) => {
+    const material = (object as THREE.Mesh).material;
+    for (const each of Array.isArray(material) ? material : material ? [material] : []) each.needsUpdate = true;
+  });
 }
 
 /** Keeps the shadow-casting area centred on what the camera is looking at. */

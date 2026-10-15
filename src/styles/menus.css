@@ -37,8 +37,25 @@
   flex-wrap: wrap;
 }
 
-.slab-header .invite-chip {
+.slab-header .invite-chip,
+.slab-header .graphics-chip {
   margin-left: auto;
+}
+
+.graphics-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 12px;
+  background: var(--slab-well);
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.graphics-field {
+  margin-top: 10px;
+  align-items: center;
 }
 
 .slab h2 {
