@@ -1,8 +1,8 @@
 import type { HostSession } from '../net/host-session';
 import { joinLink } from '../net/peer';
 import type { GameSettings } from '../sim/game-settings';
-import type { MapListing } from '../sim/map-loader';
 import { LobbyScreen } from '../ui/lobby-screen';
+import type { MenuArt } from './menu-art';
 import { returnToMenu } from './navigation';
 
 /** Shows the host's lobby and resolves with the chosen settings when they press Start. */
@@ -10,7 +10,7 @@ export function runHostLobby(
   session: HostSession,
   code: string,
   hostId: string,
-  maps: MapListing[],
+  art: MenuArt,
   initialSettings: GameSettings,
 ): Promise<GameSettings> {
   let settings = initialSettings;
@@ -21,7 +21,7 @@ export function runHostLobby(
       link: joinLink(code),
       localId: hostId,
       hostId,
-      maps,
+      art,
       isHost: true,
       onSettingsChange: (changed) => {
         settings = changed;

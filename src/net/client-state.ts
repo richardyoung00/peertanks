@@ -2,6 +2,7 @@ import { SIM_DT } from '../config';
 import { GAMEPLAY } from '../gameplay-config';
 import type { PickupViewState, TankViewState, ViewState } from '../render/view-state';
 import type { GameEvent } from '../sim/game-events';
+import type { GameSettings } from '../sim/game-settings';
 import type { MapPoint } from '../sim/game-map';
 import { POWERUP_IDS, type ItemId } from '../sim/items';
 import type { PlayerScore } from '../sim/scores';
@@ -21,50 +22,67 @@ export class ClientGameState {
   readonly prediction: LocalPrediction;
   scores: PlayerScore[];
   round: RoundSnapshot = { phase: 'playing', timeLeft: 0 };
+  /** The host's settings for the coming rounds, shown read-only in the menu. */
+  settings: GameSettings;
   /** What each pickup spot holds, from the latest snapshot. */
   pickups: (ItemId | null)[] = [];
 
-  private readonly players = new Map<string, PlayerInfo>();
+  private readonly playerMap = new Map<string, PlayerInfo>();
   private readonly timeline = new SnapshotTimeline();
   private queuedEvents: QueuedEvents[] = [];
   /** Our tank's latest health and status from the host; its position comes from prediction instead. */
   private ownState: TankSnapshot | null = null;
   private readonly pickupSpots: MapPoint[];
+  readonly mapId: string;
+  private readonly startTick: number;
 
   constructor(
     welcome: WelcomeMessage,
     private readonly ownId: string,
+    firstInputSeq = 1,
   ) {
     welcome.players.forEach((player) => this.addPlayer(player));
     this.scores = welcome.scores;
+    this.settings = welcome.settings;
     this.pickupSpots = welcome.map.pickups;
-    this.prediction = new LocalPrediction(welcome.map, this.ownPlayer, welcome.map.spawns[0]);
+    this.mapId = welcome.mapId;
+    this.startTick = welcome.startTick;
+    this.prediction = new LocalPrediction(welcome.map, this.ownPlayer, welcome.map.spawns[0], firstInputSeq);
+  }
+
+  dispose(): void {
+    this.prediction.dispose();
   }
 
   get ownPlayer(): PlayerInfo {
-    const player = this.players.get(this.ownId);
+    const player = this.playerMap.get(this.ownId);
     if (!player) throw new Error('Own player missing from roster');
     return player;
   }
 
   get playerCount(): number {
-    return this.players.size;
+    return this.playerMap.size;
+  }
+
+  get players(): PlayerInfo[] {
+    return [...this.playerMap.values()];
   }
 
   player(id: string): PlayerInfo | undefined {
-    return this.players.get(id);
+    return this.playerMap.get(id);
   }
 
   addPlayer(player: PlayerInfo): void {
-    this.players.set(player.id, player);
+    this.playerMap.set(player.id, player);
   }
 
   removePlayer(id: string): void {
-    this.players.delete(id);
+    this.playerMap.delete(id);
   }
 
   /** Returns true when our own tank jumped (e.g. it respawned), so the camera should cut rather than pan. */
   receiveSnapshot(snapshot: Snapshot, nowSeconds: number): boolean {
+    if (snapshot.tick < this.startTick) return false;
     if (!this.timeline.push(snapshot, nowSeconds)) return false;
     this.round = snapshot.round;
     this.pickups = snapshot.pickups;
@@ -78,6 +96,7 @@ export class ClientGameState {
   }
 
   queueEvents(tick: number, events: GameEvent[]): void {
+    if (tick < this.startTick) return;
     this.queuedEvents.push({ time: tick * SIM_DT, events });
   }
 
@@ -136,7 +155,7 @@ export class ClientGameState {
   }
 
   private playerByNetId(netId: number): PlayerInfo | undefined {
-    for (const player of this.players.values()) if (player.netId === netId) return player;
+    for (const player of this.playerMap.values()) if (player.netId === netId) return player;
     return undefined;
   }
 

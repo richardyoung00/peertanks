@@ -23,6 +23,10 @@ export class NameTags {
     container.appendChild(this.layer);
   }
 
+  dispose(): void {
+    this.layer.remove();
+  }
+
   update(tanks: TankViewState[], camera: THREE.Camera): void {
     const present = new Set<string>();
     for (const tank of tanks) {

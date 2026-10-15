@@ -24,9 +24,10 @@ export class ResultsScreen {
     this.panel.hidden = true;
   }
 
-  updateCountdown(secondsLeft: number): void {
+  updateCountdown(secondsLeft: number, nextMapName: string): void {
     if (this.panel.hidden) return;
-    element('results-countdown').textContent = `Next round in ${Math.ceil(secondsLeft)}`;
+    element('results-next-map').textContent = `Next map: ${nextMapName}`;
+    element('results-countdown').textContent = `Starts in ${Math.ceil(secondsLeft)}`;
   }
 
   private title(standings: PlayerScore[]): (string | HTMLElement)[] {

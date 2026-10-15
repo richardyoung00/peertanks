@@ -1,6 +1,7 @@
+import type { MenuArt } from '../app/menu-art';
 import type { PlayerInfo } from '../net/messages';
 import type { GameSettings } from '../sim/game-settings';
-import type { MapListing } from '../sim/map-loader';
+import { renderControlsGuide } from './controls-guide';
 import { makeCopyLinkButton } from './copy-link';
 import { element } from './dom';
 import { showLoading } from './notice';
@@ -12,7 +13,7 @@ export interface LobbyOptions {
   link: string;
   localId: string;
   hostId: string;
-  maps: MapListing[];
+  art: MenuArt;
   /** Only the host can change settings and start; everyone else just waits. */
   isHost: boolean;
   onSettingsChange?(settings: GameSettings): void;
@@ -28,11 +29,12 @@ export class LobbyScreen {
     element('lobby-code').textContent = options.code;
     makeCopyLinkButton(element<HTMLButtonElement>('lobby-copy'), options.link);
     element('lobby-leave').onclick = options.onLeave;
+    renderControlsGuide(element('lobby-controls'));
 
     const start = element<HTMLButtonElement>('lobby-start');
     start.hidden = !options.isHost;
     start.onclick = () => options.onStart?.();
-    element('lobby-status').textContent = options.isHost ? '' : 'Waiting for the host to start…';
+    element('lobby-status').textContent = options.isHost ? 'Players can join now' : 'Waiting for the host to start';
 
     showLoading(false);
     this.screen.hidden = false;
@@ -41,7 +43,8 @@ export class LobbyScreen {
   update(players: PlayerInfo[], settings: GameSettings): void {
     renderPlayerList(element('lobby-players'), players, { localId: this.options.localId, hostId: this.options.hostId });
     renderSettingsForm(element('lobby-settings'), settings, {
-      maps: this.options.maps,
+      maps: this.options.art.maps,
+      itemThumbnails: this.options.art.itemThumbnails,
       editable: this.options.isHost,
       onChange: this.options.onSettingsChange,
     });

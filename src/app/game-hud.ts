@@ -52,7 +52,7 @@ export class GameHud {
   }
 
   /** Driven by state rather than events, so someone joining mid-results still sees the right screen. */
-  update(round: RoundStatus, scores: PlayerScore[], loadout: Loadout, nowSeconds: number): void {
+  update(round: RoundStatus, scores: PlayerScore[], loadout: Loadout, nextMapName: string, nowSeconds: number): void {
     updateRoundTimer(round.phase, round.timeLeft);
     this.weaponBar.update(loadout);
     this.scoreboard.update(scores);
@@ -60,7 +60,7 @@ export class GameHud {
 
     if (round.phase === 'results') {
       this.results.show(scores);
-      this.results.updateCountdown(round.timeLeft);
+      this.results.updateCountdown(round.timeLeft, nextMapName);
     } else {
       this.results.hide();
     }

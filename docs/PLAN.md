@@ -201,16 +201,18 @@ Bots have names and colours like players, show on the scoreboard, and count towa
   - **objects:** spawn points and pickup spots. A pickup spot can have `items` (the subset to choose from; empty means everything) and `respawnSeconds`.
 - One map is one self-contained `.json` file, so maps can be shared. The game turns tile types into 3D models.
 - Maps are checked when they load (spawns exist, size within limits, tile types known).
-- The first map is "Meadow", 28×20 tiles. The host picks the map in the lobby.
+- Maps so far: "Meadow" (28×20, small) and "Crossroads" (36×26, medium: a river with three bridges). New maps are listed in `public/maps/index.json`.
+- Changing map between rounds replaces the host's world, and everyone gets a fresh welcome for the new map. The tick count carries on, so leftover messages from the old map are ignored.
 - **Themes:** each map has a `theme` (now `grassland`; later e.g. snow, lava, jungle). The theme sets the palette and which shapes are used for each tile type. A tree is a pine in snow and a palm in the jungle, but behaves the same in the game. A new theme should only need a theme file.
 
 ## 7. Menus and UI
 
 - **Main menu:** name (saved in `localStorage`), *Host a game*, *Join* with a code box.
+- **Look:** chunky, toy-like slabs in the arena's own colours, with buttons that press down. Headings use *Lilita One* and text uses *Barlow Semi Condensed*; both are free fonts (Open Font License), bundled with the game. The lobby and menu are laid out to fit a laptop screen with no scrolling.
 - **Host lobby** (before the first round). The invite link is already live here, and joining players appear in the lobby. The host sets:
-  - the map
-  - which weapons and powerups are allowed (this filters what spawns)
-  - the round length
+  - the **map rotation**: one or more maps, shown as cards with a rendered thumbnail and an S/M/L size badge. Rounds play the picked maps in turn, and the results screen says which map is next
+  - which weapons and powerups are allowed, as tiles with rendered pictures (this filters what spawns)
+  - the round length, as pill buttons
   - bots to add (easy/medium/hard)
   - *Start* to begin
 - **In-game menu (host),** opened with Esc (the game carries on behind it):
@@ -218,8 +220,10 @@ Bots have names and colours like players, show on the scoreboard, and count towa
   - kick players, including bots
   - add bots of any level (milestone 6)
   - end the game, which sends everyone back to the menu
-  - changing the map mid-game isn't supported yet; it's picked in the lobby
-- **In-game menu (others):** just *Leave game*, plus volume settings once there's audio.
+  - the map rotation can be changed too; the new order takes over after the current round
+- **In-game menu (others):** the same players and settings, read-only, plus *Leave game* (and volume settings once there's audio).
+- **Controls guide** (keycaps for drive, aim, fire, charge, weapons, menu) in the lobby and the in-game menu. It isn't shown on screen during play, so the weapon bar sits at the bottom edge.
+- **Thumbnails** are rendered from the game's own 3D models when menus first load, so they always match the current look and need no image files.
 - **HUD:**
   - slim invite bar (top-left) and ping bar (top-right)
   - scoreboard under the ping bar

@@ -1,1 +1,10 @@
-[{ "id": "arena-01", "name": "Meadow" }]
+[
+  {
+    "id": "arena-01",
+    "name": "Meadow"
+  },
+  {
+    "id": "crossroads",
+    "name": "Crossroads"
+  }
+]

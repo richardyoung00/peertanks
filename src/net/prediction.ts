@@ -38,9 +38,22 @@ export class LocalPrediction {
   private readonly firePrediction = new FirePrediction();
   private alive = true;
 
-  constructor(map: GameMap, player: PlayerInfo, start: MapPoint) {
+  /**
+   * `firstSeq` continues the input numbering from the previous map; the host only accepts inputs numbered
+   * higher than ones it has already applied.
+   */
+  constructor(map: GameMap, player: PlayerInfo, start: MapPoint, firstSeq = 1) {
+    this.nextSeq = firstSeq;
     this.physics = createPhysicsWorld(map);
     this.tank = createTank(this.physics, player.id, player.name, player.color, start);
+  }
+
+  get upcomingSeq(): number {
+    return this.nextSeq;
+  }
+
+  dispose(): void {
+    this.physics.free();
   }
 
   /** Applies a local input straight away. Returns the frame to send and the weapon that (probably) fired. */

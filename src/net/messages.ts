@@ -25,10 +25,23 @@ export interface JoinMetadata {
 }
 
 export type HostMessage =
-  | { type: 'welcome'; playerId: string; map: GameMap; players: PlayerInfo[]; scores: PlayerScore[] }
+  /** Sent when a player joins a running game, and to everyone whenever a new map starts. */
+  | {
+      type: 'welcome';
+      playerId: string;
+      mapId: string;
+      map: GameMap;
+      /** The tick this map started on; anything older belongs to the previous map. */
+      startTick: number;
+      players: PlayerInfo[];
+      scores: PlayerScore[];
+      settings: GameSettings;
+    }
   | { type: 'rejected'; reason: string; code?: RejectionCode }
   /** Sent while the host is still setting up, and again whenever the players or settings change. */
   | { type: 'lobby'; playerId: string; players: PlayerInfo[]; settings: GameSettings }
+  /** The settings for the coming rounds, sent whenever the host changes them mid-game. */
+  | { type: 'settings'; settings: GameSettings }
   | { type: 'kicked' }
   | { type: 'gameEnded' }
   | { type: 'playerJoined'; player: PlayerInfo }

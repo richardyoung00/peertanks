@@ -33,14 +33,21 @@ export class GameWorld implements WorldContext {
 
   private nextRoundSettings: GameSettings | null = null;
 
+  /** `startTick` lets a new map carry on counting from the last, so stale messages can be told apart. */
   constructor(
     readonly map: GameMap,
     private settings: GameSettings,
+    startTick = 0,
   ) {
+    this.tick = startTick;
     this.physics = createPhysicsWorld(map);
     this.round = new RoundClock(settings.roundSeconds);
     this.pickups = new PickupField(map, settings.allowedItems);
     this.pickups.fillAll();
+  }
+
+  dispose(): void {
+    this.physics.free();
   }
 
   get currentSettings(): GameSettings {

@@ -49,6 +49,7 @@ export class HostSession {
   private readonly remotePlayers = new Map<string, RemotePlayer>();
   private listener: HostSessionListener = {};
   private world: GameWorld | null = null;
+  private mapId = '';
   private sentScoresVersion = -1;
   private readonly stallGuard = new StallGuard(SILENCE_CHECK_INTERVAL_MS);
 
@@ -78,11 +79,21 @@ export class HostSession {
     this.broadcastLobby();
   }
 
-  /** Leaves the lobby: everyone gets a tank and is sent into the game. */
-  startGame(world: GameWorld): void {
+  /**
+   * Puts everyone into a world: when leaving the lobby, and again for each new map in the rotation.
+   * Every player gets a tank, and every remote player is welcomed onto the map.
+   */
+  startMap(world: GameWorld, mapId: string): void {
     this.world = world;
+    this.mapId = mapId;
+    this.sentScoresVersion = -1;
     for (const player of this.roster.all) world.addTank(player.id, player.name, player.color);
     for (const player of this.remotePlayers.values()) this.sendWelcome(player);
+  }
+
+  /** Tells everyone in the game about new settings (they apply from the next round). */
+  broadcastSettings(settings: GameSettings): void {
+    this.broadcast({ type: 'settings', settings });
   }
 
   kick(id: string): void {
@@ -158,9 +169,12 @@ export class HostSession {
     this.send(player.connection, {
       type: 'welcome',
       playerId: player.info.id,
+      mapId: this.mapId,
       map: this.world.map,
+      startTick: this.world.tick,
       players: this.roster.all,
       scores: this.world.scores.all,
+      settings: this.world.currentSettings,
     });
   }
 

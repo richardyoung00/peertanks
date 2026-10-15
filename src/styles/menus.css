@@ -1,0 +1,494 @@
+/*
+ * Lobby and in-game menu. The look borrows from the arena itself: thick forest-green slabs with a solid
+ * edge underneath (like the floor blocks), and chunky buttons that press down when clicked.
+ */
+:root {
+  --slab: #1f3326;
+  --slab-rim: #2e4a36;
+  --slab-edge: #14231a;
+  --slab-well: #16261c;
+  --tile: #2a4232;
+  --cream: #f7f3e3;
+  --toy-yellow: #f5b83d;
+  --toy-yellow-edge: #b9821c;
+  --grass: #93c66e;
+  --grass-deep: #3d6b3f;
+  --brick: #d6493a;
+  --brick-edge: #8f2a20;
+  --display-font: 'Lilita One', system-ui, sans-serif;
+}
+
+/* Sized to fit a laptop screen without scrolling; on small screens the columns stack. */
+.slab {
+  width: min(1140px, 96vw);
+  padding: 20px 26px 22px;
+  border: 3px solid var(--slab-rim);
+  border-radius: 18px;
+  background: var(--slab);
+  box-shadow: 0 8px 0 var(--slab-edge);
+  color: var(--cream);
+  text-align: left;
+}
+
+.slab-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.slab-header .invite-chip {
+  margin-left: auto;
+}
+
+.slab h2 {
+  margin: 0;
+  font-family: var(--display-font);
+  font-weight: 400;
+  font-size: 38px;
+  letter-spacing: 0.5px;
+}
+
+.slab h3 {
+  margin: 0 0 10px;
+  font-family: var(--display-font);
+  font-weight: 400;
+  font-size: 20px;
+}
+
+.slab-body {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 26px;
+  margin-top: 18px;
+}
+
+.slab-status {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.slab-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.slab-footer .controls-guide {
+  flex: 1;
+  margin-right: 8px;
+}
+
+/* The invite code sits in a recessed well, like a slot in the slab. */
+.invite-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 16px;
+  border-radius: 12px;
+  background: var(--slab-well);
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.invite-chip strong {
+  font-family: var(--display-font);
+  font-weight: 400;
+  font-size: 26px;
+  letter-spacing: 4px;
+  color: var(--toy-yellow);
+}
+
+/* Players */
+.player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.player-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--tile);
+}
+
+.player-list .score-dot {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+}
+
+.player-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.player-tag {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Settings */
+.settings-note {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+#lobby-settings,
+#game-menu-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+}
+
+.settings-section + .settings-section {
+  margin-top: 16px;
+}
+
+.settings-heading {
+  margin: 0 0 4px;
+  font-family: var(--display-font);
+  font-weight: 400;
+  font-size: 20px;
+}
+
+.settings-hint {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.map-strip {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px 2px 12px;
+  scroll-snap-type: x mandatory;
+}
+
+.map-card,
+.pill,
+.item-tile {
+  border: 3px solid transparent;
+  color: var(--cream);
+  cursor: pointer;
+  transition: transform 80ms ease-out, box-shadow 80ms ease-out;
+}
+
+.map-card {
+  position: relative;
+  flex: none;
+  width: 196px;
+  padding: 6px 6px 10px;
+  border-radius: 14px;
+  background: var(--tile);
+  box-shadow: 0 5px 0 var(--slab-edge);
+  text-align: left;
+  scroll-snap-align: start;
+}
+
+.map-card-picture {
+  display: block;
+  width: 100%;
+  aspect-ratio: 360 / 220;
+  border-radius: 10px;
+}
+
+.map-card-name {
+  display: block;
+  margin: 8px 4px 0;
+  font-family: var(--display-font);
+  font-size: 20px;
+}
+
+/* The map size badge is the one bold flourish: a fat round token on the corner of the picture. */
+.map-card-size {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--cream);
+  color: var(--slab);
+  font-family: var(--display-font);
+  font-size: 22px;
+  box-shadow: 0 3px 0 rgba(20, 35, 26, 0.6);
+}
+
+.map-card[aria-pressed='true'] {
+  border-color: var(--toy-yellow);
+}
+
+.map-card[aria-pressed='true'] .map-card-size {
+  background: var(--toy-yellow);
+}
+
+.map-card[aria-pressed='false'] .map-card-picture {
+  filter: grayscale(0.7) brightness(0.7);
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--tile);
+  box-shadow: 0 4px 0 var(--slab-edge);
+  font-family: var(--display-font);
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.pill[aria-pressed='true'] {
+  background: var(--toy-yellow);
+  color: #2b2108;
+  box-shadow: 0 4px 0 var(--toy-yellow-edge);
+}
+
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.item-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 6px 8px;
+  border-radius: 12px;
+  background: var(--tile);
+  box-shadow: 0 4px 0 var(--slab-edge);
+}
+
+.item-tile-picture {
+  width: 52px;
+  height: 52px;
+}
+
+.item-tile-name {
+  font-size: 14px;
+  line-height: 1.15;
+  font-weight: 600;
+  text-align: center;
+}
+
+.item-tile[aria-pressed='true'] {
+  background: var(--grass-deep);
+  border-color: var(--grass);
+}
+
+.item-tile[aria-pressed='false'] .item-tile-picture {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+
+.item-tile[aria-pressed='false'] .item-tile-name {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* Pressing a control pushes it down onto its edge. Read-only controls keep their look but don't move. */
+.map-card:not(:disabled):active,
+.pill:not(:disabled):active,
+.item-tile:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--slab-edge);
+}
+
+.map-card:disabled,
+.pill:disabled,
+.item-tile:disabled {
+  cursor: default;
+}
+
+/* Buttons */
+.chunky {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 12px;
+  background: var(--slab-rim);
+  box-shadow: 0 5px 0 var(--slab-edge);
+  color: var(--cream);
+  font-family: var(--display-font);
+  font-size: 19px;
+  cursor: pointer;
+  transition: transform 80ms ease-out, box-shadow 80ms ease-out;
+}
+
+.chunky:hover {
+  filter: brightness(1.1);
+}
+
+.chunky:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--slab-edge);
+}
+
+.chunky.go {
+  background: var(--toy-yellow);
+  box-shadow: 0 5px 0 var(--toy-yellow-edge);
+  color: #2b2108;
+}
+
+.chunky.danger {
+  background: var(--brick);
+  box-shadow: 0 5px 0 var(--brick-edge);
+}
+
+.chunky.small {
+  padding: 6px 12px;
+  font-size: 15px;
+  box-shadow: 0 3px 0 var(--slab-edge);
+}
+
+.chunky.small:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--slab-edge);
+}
+
+.slab button:focus-visible,
+.screen button:focus-visible,
+.screen input:focus-visible {
+  outline: 3px solid #fff3b0;
+  outline-offset: 2px;
+}
+
+/* How to play */
+.controls-guide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--slab-well);
+  font-size: 14px;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-keys {
+  display: flex;
+  gap: 4px;
+}
+
+.control kbd {
+  min-width: 18px;
+  padding: 3px 7px;
+  border-radius: 7px;
+  background: var(--cream);
+  box-shadow: 0 3px 0 #a39c84;
+  color: var(--slab);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Slim scrollbars in the slab's colours, for the map strip and for small screens where the menu stacks. */
+.map-strip,
+.screen {
+  scrollbar-width: thin;
+  scrollbar-color: var(--slab-rim) transparent;
+}
+
+.map-strip::-webkit-scrollbar,
+.screen::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.map-strip::-webkit-scrollbar-thumb,
+.screen::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--slab-rim);
+}
+
+@media (max-width: 980px) {
+  #lobby-settings,
+  #game-menu-settings {
+    grid-template-columns: 1fr;
+  }
+
+  .slab-footer {
+    flex-wrap: wrap;
+  }
+
+  .slab-footer .controls-guide {
+    flex-basis: 100%;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .slab {
+    padding: 16px;
+  }
+
+  .slab-body {
+    grid-template-columns: 1fr;
+  }
+
+  .slab h2 {
+    font-size: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chunky,
+  .map-card,
+  .pill,
+  .item-tile {
+    transition: none;
+  }
+}
+
+/* The end-of-round results share the slab look. */
+#results {
+  border: 3px solid var(--slab-rim);
+  border-radius: 18px;
+  background: var(--slab);
+  box-shadow: 0 8px 0 var(--slab-edge);
+}
+
+#results-next-map {
+  margin-top: 16px;
+  font-family: var(--display-font);
+  font-size: 20px;
+  color: var(--toy-yellow);
+}
+
+#results-countdown {
+  margin-top: 4px;
+}
+
+/* Fallback for small screens: the whole menu scrolls (with the slim scrollbar) instead of being cut off. */
+#lobby,
+#game-menu {
+  overflow-y: auto;
+  justify-content: safe center;
+  padding: 16px 0;
+  box-sizing: border-box;
+}

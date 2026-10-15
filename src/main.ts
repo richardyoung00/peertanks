@@ -1,3 +1,8 @@
+import '@fontsource/barlow-semi-condensed/latin-500.css';
+import '@fontsource/barlow-semi-condensed/latin-600.css';
+import '@fontsource/barlow-semi-condensed/latin-700.css';
+import '@fontsource/lilita-one/latin-400.css';
+import './styles/menus.css';
 import { startClientGame } from './app/client-game';
 import { startHostGame } from './app/host-game';
 import { returnToMenu } from './app/navigation';

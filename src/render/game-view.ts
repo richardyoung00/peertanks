@@ -41,6 +41,7 @@ export class GameView {
   private readonly targetMarker = createTargetMarker();
   private readonly pickupView = new PickupView();
   private readonly nameTags: NameTags;
+  private readonly onResize = () => this.resize();
   private elapsed = 0;
 
   constructor(
@@ -60,7 +61,15 @@ export class GameView {
       this.targetMarker,
     );
     this.nameTags = new NameTags(container);
-    window.addEventListener('resize', () => this.resize());
+    window.addEventListener('resize', this.onResize);
+  }
+
+  /** Removes everything this view added to the page, so a new one can take over (e.g. on a map change). */
+  dispose(): void {
+    window.removeEventListener('resize', this.onResize);
+    this.nameTags.dispose();
+    this.parts.renderer.domElement.remove();
+    this.parts.renderer.dispose();
   }
 
   groundPointAt(ndcX: number, ndcY: number): THREE.Vector3 | null {

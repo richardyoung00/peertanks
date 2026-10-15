@@ -1,5 +1,7 @@
+import type { MenuArt } from '../app/menu-art';
 import type { PlayerInfo } from '../net/messages';
 import type { GameSettings } from '../sim/game-settings';
+import { renderControlsGuide } from './controls-guide';
 import { element } from './dom';
 import { renderPlayerList } from './player-list';
 import { renderSettingsForm } from './settings-form';
@@ -13,7 +15,8 @@ export interface HostMenuControls {
 export interface GameMenuOptions {
   localId: string;
   hostId: string;
-  /** Only the host gets settings, kicking and ending the game; everyone else can just leave. */
+  art: MenuArt;
+  /** Only the host can change settings, kick and end the game; everyone else sees the settings and can leave. */
   host?: HostMenuControls;
   onLeave(): void;
 }
@@ -25,12 +28,16 @@ export class GameMenu {
   private settings: GameSettings | null = null;
 
   constructor(private readonly options: GameMenuOptions) {
-    element('game-menu-host').hidden = !options.host;
-    element('game-menu-end').hidden = !options.host;
-    element('game-menu-leave').hidden = Boolean(options.host);
+    const isHost = Boolean(options.host);
+    element('game-menu-end').hidden = !isHost;
+    element('game-menu-leave').hidden = isHost;
+    element('game-menu-settings-note').textContent = isHost
+      ? 'Changes apply from the next round.'
+      : 'Only the host can change these.';
     element('game-menu-close').onclick = () => this.close();
     element('game-menu-leave').onclick = options.onLeave;
     element('game-menu-end').onclick = () => options.host?.onEndGame();
+    renderControlsGuide(element('game-menu-controls'));
 
     window.addEventListener('keydown', (event) => {
       if (event.code === 'Escape') this.toggle();
@@ -41,7 +48,7 @@ export class GameMenu {
     return !this.screen.hidden;
   }
 
-  update(players: PlayerInfo[], settings: GameSettings | null): void {
+  update(players: PlayerInfo[], settings: GameSettings): void {
     this.players = players;
     this.settings = settings;
     if (this.isOpen) this.render();
@@ -63,21 +70,21 @@ export class GameMenu {
 
   private render(): void {
     const host = this.options.host;
-    if (!host) return;
     renderPlayerList(element('game-menu-players'), this.players, {
       localId: this.options.localId,
       hostId: this.options.hostId,
-      onKick: host.onKick,
+      onKick: host?.onKick,
     });
-    if (this.settings) {
-      renderSettingsForm(element('game-menu-settings'), this.settings, {
-        editable: true,
-        onChange: (settings) => {
-          this.settings = settings;
-          host.onSettingsChange(settings);
-          this.render();
-        },
-      });
-    }
+    if (!this.settings) return;
+    renderSettingsForm(element('game-menu-settings'), this.settings, {
+      maps: this.options.art.maps,
+      itemThumbnails: this.options.art.itemThumbnails,
+      editable: Boolean(host),
+      onChange: (settings) => {
+        this.settings = settings;
+        host?.onSettingsChange(settings);
+        this.render();
+      },
+    });
   }
 }
