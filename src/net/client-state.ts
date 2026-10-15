@@ -84,6 +84,7 @@ export class ClientGameState {
   receiveSnapshot(snapshot: Snapshot, nowSeconds: number): boolean {
     if (snapshot.tick < this.startTick) return false;
     if (!this.timeline.push(snapshot, nowSeconds)) return false;
+    this.prediction.shots.reconcile(snapshot.projectiles, this.ownPlayer.netId);
     this.round = snapshot.round;
     this.pickups = snapshot.pickups;
     const ownState = snapshot.tanks.find((tank) => tank.netId === this.ownPlayer.netId);
@@ -126,14 +127,19 @@ export class ClientGameState {
     if (!this.ownState) return { tanks, projectiles: [], pickups, cameraFocus: null };
 
     tanks.push(this.ownTankView(alpha, this.ownState));
-    const projectiles = (sample?.projectiles ?? []).map((projectile) => ({
-      id: projectile.id,
-      kind: projectile.kind,
-      x: projectile.x,
-      y: projectile.y,
-      height: projectile.height,
-      angle: Math.atan2(projectile.vy, projectile.vx),
-    }));
+    const shots = this.prediction.shots;
+    const ownNetId = this.ownPlayer.netId;
+    const projectiles = (sample?.projectiles ?? [])
+      .filter((projectile) => !shots.hides(projectile, ownNetId))
+      .map((projectile) => ({
+        id: projectile.id,
+        kind: projectile.kind,
+        x: projectile.x,
+        y: projectile.y,
+        height: projectile.height,
+        angle: Math.atan2(projectile.vy, projectile.vx),
+      }));
+    projectiles.push(...shots.views(alpha));
     // While dead, the camera holds still until the tank respawns.
     const own = tanks[tanks.length - 1];
     const cameraFocus = this.ownState.alive ? { x: own.x, y: own.y } : null;
@@ -159,8 +165,10 @@ export class ClientGameState {
     return undefined;
   }
 
+  /** Our own shots and their wall hits were already shown locally the moment they happened. */
   private isOwnPredictedShot(event: GameEvent): boolean {
-    return event.type === 'shotFired' && event.tankId === this.ownId;
+    if (event.type === 'shotFired') return event.tankId === this.ownId;
+    return event.type === 'shellHit' && event.ownerId === this.ownId && !event.tankId;
   }
 }
 

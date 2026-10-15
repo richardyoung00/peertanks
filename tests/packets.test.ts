@@ -21,7 +21,7 @@ const SNAPSHOT: Snapshot = {
       powerups: ['speed', 'dead-mans-switch'],
     },
   ],
-  projectiles: [{ id: 70000, kind: 'grenade', x: 3.1, y: 4.2, vx: 5, vy: -5, height: 0.6 }],
+  projectiles: [{ id: 70000, kind: 'grenade', ownerNetId: 4, x: 3.1, y: 4.2, vx: 5, vy: -5, height: 0.6 }],
   pickups: ['rocket', null, 'shield'],
   own: {
     ammo: { 'machine-gun': 120, 'bouncy-cannon': 0, laser: 5, rocket: 0, grenade: 3, mortar: 2 },
@@ -42,7 +42,7 @@ describe('packets', () => {
     expect(tank).toMatchObject({ weapon: 'mortar', powerups: ['speed', 'dead-mans-switch'], health: 55, alive: true, invulnerable: false });
     expect(tank.x).toBeCloseTo(12.5, 1);
     expect(tank.vx).toBeCloseTo(-1.5, 1);
-    expect(projectile).toMatchObject({ kind: 'grenade', id: 70000 & 0xffff });
+    expect(projectile).toMatchObject({ kind: 'grenade', id: 70000 & 0xffff, ownerNetId: 4 });
     expect(projectile.height).toBeCloseTo(0.6, 1);
     expect(snapshot.pickups).toEqual(['rocket', null, 'shield']);
     expect(snapshot.own?.ammo).toMatchObject({ 'machine-gun': 120, mortar: 2 });

@@ -70,5 +70,5 @@ function fireStraight(context: WorldContext, tank: Tank, angle: number, launch: 
   announceShot(context, tank, weapon, angle);
   if (launch()) return;
   const blocked = barrelObstruction(context, tank, angle);
-  if (blocked) context.emit({ type: 'shellHit', x: blocked.x, y: blocked.y });
+  if (blocked) context.emit({ type: 'shellHit', x: blocked.x, y: blocked.y, ownerId: tank.id });
 }

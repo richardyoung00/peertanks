@@ -32,6 +32,8 @@ interface RemotePlayer {
    * can break the whole connection. So we only send once the client has sent us something on it.
    */
   fastChannelConfirmed: boolean;
+  /** When this player was last sent a map. Building it can freeze a slow machine for a while. */
+  welcomedAt: number;
 }
 
 export interface HostSessionListener {
@@ -165,6 +167,7 @@ export class HostSession {
       inputs: new InputQueue(),
       lastHeardAt: performance.now(),
       fastChannelConfirmed: false,
+      welcomedAt: performance.now(),
     };
     this.remotePlayers.set(info.id, player);
     this.listenTo(player);
@@ -187,6 +190,7 @@ export class HostSession {
 
   private sendWelcome(player: RemotePlayer): void {
     if (!this.world) return;
+    player.welcomedAt = performance.now();
     this.send(player.connection, {
       type: 'welcome',
       playerId: player.info.id,
@@ -239,8 +243,9 @@ export class HostSession {
       return;
     }
     for (const player of this.remotePlayers.values()) {
-      // Lobby players only send pings, so they get the longer allowance too.
-      const allowedSilence = player.fastChannelConfirmed ? NETWORK.silenceTimeoutMs : NETWORK.joinGraceMs;
+      // Lobby players only send pings, and anyone just sent a map may be busy building it: both get longer.
+      const settling = now - player.welcomedAt < NETWORK.joinGraceMs;
+      const allowedSilence = player.fastChannelConfirmed && !settling ? NETWORK.silenceTimeoutMs : NETWORK.joinGraceMs;
       if (now - player.lastHeardAt <= allowedSilence) continue;
       player.connection.close();
       this.removePlayer(player.info.id, 'stopped responding');

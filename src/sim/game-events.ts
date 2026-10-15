@@ -22,7 +22,10 @@ export interface ShellHitEvent {
   type: 'shellHit';
   x: number;
   y: number;
+  /** The tank it hit; missing when it hit a wall. */
   tankId?: string;
+  /** Who fired it, so they can skip the effects they already showed themselves. */
+  ownerId: string;
 }
 
 export interface TankDamagedEvent {

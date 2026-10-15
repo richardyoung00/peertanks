@@ -61,7 +61,7 @@ function stepBouncyShot(context: WorldContext, projectile: Projectile, dt: numbe
   }
   bounceOff(projectile, hit, 1);
   projectile.bouncesLeft--;
-  context.emit({ type: 'shellHit', x: hit.x, y: hit.y });
+  context.emit({ type: 'shellHit', x: hit.x, y: hit.y, ownerId: projectile.ownerId });
   return true;
 }
 
@@ -153,7 +153,7 @@ function bounceOffArenaEdge(context: WorldContext, projectile: Projectile, bounc
 }
 
 function hitAndVanish(context: WorldContext, projectile: Projectile, hit: ProjectileHit): void {
-  context.emit({ type: 'shellHit', x: hit.x, y: hit.y, tankId: hit.tank?.id });
+  context.emit({ type: 'shellHit', x: hit.x, y: hit.y, tankId: hit.tank?.id, ownerId: projectile.ownerId });
   if (hit.tank) damageTank(context, hit.tank, projectile.damage, projectile.ownerId, projectile.weapon);
 }
 

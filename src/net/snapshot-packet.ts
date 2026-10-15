@@ -14,7 +14,7 @@ import type { ByteReader, ByteWriter } from './binary';
 
 const HEADER_BYTES = 15;
 const TANK_BYTES = 16;
-const PROJECTILE_BYTES = 12;
+const PROJECTILE_BYTES = 13;
 const OWN_STATUS_BYTES = PICKUP_WEAPON_IDS.length + POWERUP_IDS.length;
 
 const FLAG_ALIVE = 1 << 0;
@@ -23,6 +23,7 @@ const FIRST_POWERUP_FLAG = 2;
 const ROUND_PHASES: RoundPhase[] = ['playing', 'results'];
 const HEIGHT_SCALE = 20;
 const EMPTY_SPOT = 0;
+export const NO_OWNER = 255;
 
 export interface TankSnapshot {
   netId: number;
@@ -42,6 +43,8 @@ export interface TankSnapshot {
 export interface ProjectileSnapshot {
   id: number;
   kind: ProjectileKind;
+  /** Net id of the tank that fired it, or NO_OWNER if they've left. Lets players spot their own shots. */
+  ownerNetId: number;
   x: number;
   y: number;
   vx: number;
@@ -157,6 +160,7 @@ function readTank(reader: ByteReader): TankSnapshot {
 function writeProjectile(writer: ByteWriter, projectile: ProjectileSnapshot): void {
   writer.u16(projectile.id & 0xffff);
   writer.u8(PROJECTILE_KINDS.indexOf(projectile.kind));
+  writer.u8(projectile.ownerNetId);
   writer.coord(projectile.x);
   writer.coord(projectile.y);
   writer.velocity(projectile.vx);
@@ -168,6 +172,7 @@ function readProjectile(reader: ByteReader): ProjectileSnapshot {
   return {
     id: reader.u16(),
     kind: PROJECTILE_KINDS[reader.u8()] ?? 'shell',
+    ownerNetId: reader.u8(),
     x: reader.coord(),
     y: reader.coord(),
     vx: reader.velocity(),

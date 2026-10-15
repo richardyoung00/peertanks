@@ -1,6 +1,7 @@
 import type RAPIER from '@dimforge/rapier2d-compat';
 import { NETWORK, SIM_DT } from '../config';
 import { lerpAngle } from '../sim/angles';
+import type { Point } from '../sim/game-events';
 import type { GameMap, MapPoint } from '../sim/game-map';
 import type { WeaponId } from '../sim/items';
 import { selectWeapon } from '../sim/loadout';
@@ -10,6 +11,7 @@ import { createTank, driveTank, rememberPreviousPose, syncTankPosition, type Tan
 import { FirePrediction } from './fire-prediction';
 import type { PlayerInfo } from './messages';
 import type { InputFrame, OwnStatus, TankSnapshot } from './packets';
+import { PredictedShots } from './predicted-shots';
 
 // A correction bigger than this is a teleport (e.g. respawn), so jump rather than glide.
 const SNAP_DISTANCE = 2;
@@ -27,8 +29,17 @@ export interface PredictedPose {
  * Moves the local player's tank immediately on their own machine, then quietly corrects it when the host's
  * authoritative position arrives by replaying the inputs the host has not processed yet.
  */
+export interface PredictedStep {
+  frame: InputFrame;
+  /** The weapon that (probably) fired. */
+  fired: WeaponId | null;
+  /** Where our predicted shots hit walls this tick. */
+  impacts: Point[];
+}
+
 export class LocalPrediction {
   readonly tank: Tank;
+  readonly shots: PredictedShots;
   private readonly physics: RAPIER.World;
   private readonly otherTanks = new Map<number, Tank>();
   private history: InputFrame[] = [];
@@ -46,6 +57,7 @@ export class LocalPrediction {
     this.nextSeq = firstSeq;
     this.physics = createPhysicsWorld(map);
     this.tank = createTank(this.physics, player.id, player.name, player.color, start);
+    this.shots = new PredictedShots(this.physics);
   }
 
   get upcomingSeq(): number {
@@ -56,8 +68,8 @@ export class LocalPrediction {
     this.physics.free();
   }
 
-  /** Applies a local input straight away. Returns the frame to send and the weapon that (probably) fired. */
-  step(input: PlayerInput): { frame: InputFrame; fired: WeaponId | null } {
+  /** Applies a local input straight away, and fires our predicted shots. */
+  step(input: PlayerInput): PredictedStep {
     rememberPreviousPose(this.tank);
     if (input.selectWeapon) selectWeapon(this.tank.loadout, input.selectWeapon);
     if (this.alive) this.simulate(input);
@@ -66,7 +78,13 @@ export class LocalPrediction {
     this.history.push(frame);
     if (this.history.length > MAX_HISTORY) this.history.shift();
     const fired = this.alive ? this.firePrediction.predict(this.tank.loadout, input) : null;
-    return { frame, fired };
+    const impacts = this.shots.step();
+    if (fired) {
+      // Shots leave the barrel as drawn, which includes any correction still being smoothed out.
+      const blocked = this.shots.fire(fired, this.pose(1), this.tank.aimAngle);
+      if (blocked) impacts.push(blocked);
+    }
+    return { frame, fired, impacts };
   }
 
   /** The latest few frames; sending them again covers packets that get lost on the way. */

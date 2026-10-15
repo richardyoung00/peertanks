@@ -84,6 +84,15 @@ export class GameView {
     this.setQuality(this.quality);
     this.stopWatchingQuality = onGraphicsQualityChange((quality) => this.setQuality(quality));
     window.addEventListener('resize', this.onResize);
+    this.warmUp();
+  }
+
+  /**
+   * Draws one frame straight away, so the graphics card builds its shaders now (which can freeze a slow
+   * machine for a moment) rather than mid-game, after the player has started sending inputs.
+   */
+  private warmUp(): void {
+    this.drawFrame();
   }
 
   /** Removes everything this view added to the page, so a new one can take over (e.g. on a map change). */
@@ -152,6 +161,10 @@ export class GameView {
     if (state.cameraFocus) this.followCamera.follow(state.cameraFocus.x, state.cameraFocus.y, frameDt);
     this.followCamera.updateShake(frameDt);
     centreSunOn(this.parts.sun, this.followCamera.focusX, this.followCamera.focusZ);
+    this.drawFrame();
+  }
+
+  private drawFrame(): void {
     if (this.quality === 'high') this.bloom.render();
     else this.parts.renderer.render(this.parts.scene, this.followCamera.camera);
   }

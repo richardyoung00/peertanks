@@ -86,7 +86,8 @@ tools/
 **Smoothness**
 - **Own tank:** moves instantly (prediction), then is quietly corrected by replaying inputs the host hasn't processed yet.
 - **Other tanks:** drawn about 100 ms behind real time, blended smoothly between snapshots.
-- **Own shots:** recoil and muzzle flash are instant. **To do:** draw a predicted shell straight away too, since on a laggy connection the real one currently appears slightly behind a moving tank.
+- **Own shots:** recoil, muzzle flash and the shot itself are instant. Shells, bullets, bouncy shots and rockets are predicted locally: they bounce off and stop at walls straight away (the walls are the same everywhere) but fly through tanks, because only the host decides hits. Each prediction pairs with the host's copy when it turns up in a snapshot, which is then hidden, and vanishes when the host's copy does. A rocket that hits a wall waits there until the host's explosion is due. Grenades, mortars and lasers come from the host as before.
+- **Slow machines:** a new game view draws one frame as soon as it's built, so shader building freezes the page before the player starts sending inputs, and the host allows the longer join grace after every map it sends.
 - **Events** (hits, shots) play in time with the delayed view, so effects line up with what you see.
 
 **NAT / connection problems**
@@ -209,6 +210,11 @@ Bots get tank-themed names and colours like players, show a small level-coloured
 - One map is one self-contained `.json` file, so maps can be shared. The game turns tile types into 3D models.
 - Maps are checked when they load (spawns exist, size within limits, tile types known).
 - Maps so far: "Meadow" (28×20, small) and "Crossroads" (36×26, medium: a river with three bridges). New maps are listed in `public/maps/index.json`.
+- **More maps (planned):**
+  - Meadow loses its lava pool and stays all green (water, trees and rocks only)
+  - new maps in new themes, e.g. a **volcanic** map (dark volcanic rock, ash, lava) and a **snow** map (snowfields, pines, frozen ponds)
+  - new themes reuse the existing tile types where they play the same (a snowy rock is still a rock). A genuinely new tile type is only added if it plays differently (e.g. slippery ice), and that's decided when the map is designed
+- **Map picker for a longer list:** the lobby's map strip already scrolls sideways; with many maps it either keeps scrolling with clear arrows and the selected maps summarised, or opens a bigger selection panel (a grid of map cards with size and theme). To be decided when there are enough maps to need it.
 - Changing map between rounds replaces the host's world, and everyone gets a fresh welcome for the new map. The tick count carries on, so leftover messages from the old map are ignored.
 - **Themes:** each map has a `theme` (now `grassland`; later e.g. snow, lava, jungle). The theme sets the palette and which shapes are used for each tile type. A tree is a pine in snow and a palm in the jungle, but behaves the same in the game. A new theme should only need a theme file.
 
@@ -228,7 +234,14 @@ Bots get tank-themed names and colours like players, show a small level-coloured
   - add bots of any level
   - end the game, which sends everyone back to the menu
   - the map rotation can be changed too; the new order takes over after the current round
-- **In-game menu (others):** the same players and settings, read-only, plus *Leave game* (and volume settings once there's audio).
+- **In-game menu (others):** the same players and settings, read-only, plus *Leave game*.
+- **Player settings** (each player's own, unlike the host's game settings). There will be more of these over time, so they get their own space instead of being squeezed into other screens:
+  - a *Settings* button on the main menu and in the Esc menu (for everyone) opens one settings panel, in the same slab style, grouped into sections (e.g. Graphics, Audio, Controls)
+  - everything is saved in `localStorage` and applies straight away
+  - **Graphics:** High / Low (built; it now sits in the main menu and the Esc menu header, and moves into the panel)
+  - **Audio:** master, sound effects and announcer volume (with milestone 8)
+  - **Auto-switch weapons:** whether picking up a new weapon switches to it (now it always does). The switch happens on the host, so the client has to tell the host its choice: a small message after joining, never a change to `JoinMetadata`, which must keep its shape for the version check
+  - room for later ones, e.g. key bindings or camera shake
 - **Controls guide** (keycaps for drive, aim, fire, charge, weapons, menu) in the lobby and the in-game menu. It isn't shown on screen during play, so the weapon bar sits at the bottom edge.
 - **Thumbnails** are rendered from the game's own 3D models when menus first load, so they always match the current look and need no image files.
 - **HUD:**
@@ -315,7 +328,7 @@ Each milestone ends with something playable to check.
    - 4 powerups
    - map pickup spots with subsets and respawn timers
    - weapon switching
-   - predicted shells (still to do; moved to after milestone 7)
+   - predicted shells (done after milestone 7)
 
    Until the lobby exists, every weapon and powerup is allowed.
 5. ✅ **Lobby and game menus:**
@@ -332,7 +345,34 @@ Each milestone ends with something playable to check.
    - rounded shorelines and banks, softer hazard edges
    - explosions, trails and death animations
    - bloom and the low-graphics option
-8. **Audio:** sound effects, announcer and volume settings.
+8. **Audio and player settings:**
+   - sound effects, announcer
+   - the player settings panel (graphics, audio volumes, auto-switch weapons)
+9. **More maps and themes:**
+   - Meadow without lava
+   - volcanic and snow themes, with a map for each (and new tile types only where they play differently)
+   - a map picker that copes with a long list
+## 14. Optimisation (later)
+  Network data
+
+  Measure what's actually sent per second, split by message type: snapshots, inputs, events and the welcome message (which carries the whole map).
+  Snapshots and inputs are already compact binary, so BSON wouldn't help much; it's usually bigger than our hand-packed format. The better candidates are:
+  Delta snapshots: only send tanks and projectiles that changed since the last snapshot the client confirmed.
+  JSON messages (events, welcome, scores): try a binary encoding, or compression for the large one-off welcome. Browsers have built-in gzip via CompressionStream.
+  Slower connections: send fewer snapshots (e.g. 10 a second instead of 20) to players with high ping or packet loss, and lean more on interpolation.
+  Download size
+
+  Rapier's WASM, embedded as base64, is most of the ~1.5 MB gzipped download. Check for:
+  a non-base64 build loaded as a separate .wasm file, which is smaller and cached separately
+  a lighter 2D physics option (we use little beyond colliders, ray casts and dynamic bodies)
+  three.js: check that unused parts are tree-shaken out.
+  Split code that isn't needed at start, such as menus versus the game, so the first load is lighter.
+  Assets
+
+  Compress and resize any images (WebP or AVIF where supported).
+  Encode audio for the web, e.g. Opus or OGG at a sensible bitrate, trimmed and normalised.
+  Fonts: load only the characters and weights actually used.
+  How to judge it: record the bundle size and the per-player bandwidth before and after each change.
 
 ## 12. Risks
 

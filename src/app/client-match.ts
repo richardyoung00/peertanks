@@ -61,9 +61,11 @@ export class ClientMatch {
   private tick(): void {
     const state = this.state;
     state.updatePredictionObstacles(nowSeconds());
-    const { fired } = state.prediction.step(this.controls.read(this.view, state.prediction.tank));
+    const { fired, impacts } = state.prediction.step(this.controls.read(this.view, state.prediction.tank));
     this.session.sendInputs(state.prediction.recentFrames());
     if (fired) this.showPredictedShot();
+    const ownerId = state.ownPlayer.id;
+    if (impacts.length > 0) this.view.handleEvents(impacts.map(({ x, y }) => ({ type: 'shellHit', x, y, ownerId })));
   }
 
   private render(alpha: number, frameDt: number): void {

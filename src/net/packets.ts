@@ -4,6 +4,7 @@ import { readSnapshot, snapshotSize, writeSnapshot, type Snapshot } from './snap
 
 export type { InputFrame } from './input-packet';
 export type { OwnStatus, ProjectileSnapshot, RoundSnapshot, Snapshot, TankSnapshot } from './snapshot-packet';
+export { NO_OWNER } from './snapshot-packet';
 
 // Binary packets sent over the fast (unreliable) channel. The first byte says which kind it is.
 const PACKET_INPUT = 1;

@@ -2,7 +2,7 @@ import { POWERUP_IDS } from '../sim/items';
 import { emptyLoadout } from '../sim/loadout';
 import type { GameWorld } from '../sim/game-world';
 import type { Tank } from '../sim/tank';
-import type { OwnStatus, Snapshot } from './packets';
+import { NO_OWNER, type OwnStatus, type Snapshot } from './packets';
 import type { Roster } from './roster';
 
 /** Builds the shared part of a snapshot; each client then gets its own `ackSeq` and `own` status. */
@@ -31,6 +31,7 @@ export function buildSnapshot(world: GameWorld, roster: Roster): Snapshot {
   const projectiles = world.projectiles.map((projectile) => ({
     id: projectile.id,
     kind: projectile.kind,
+    ownerNetId: roster.netIdOf(projectile.ownerId) ?? NO_OWNER,
     x: projectile.x,
     y: projectile.y,
     vx: projectile.vx,
