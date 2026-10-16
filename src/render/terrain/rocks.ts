@@ -8,7 +8,7 @@ import { isRockShape, ROCK_SHAPES } from './rock-shapes';
 
 export function buildRocks(map: GameMap, theme: Theme): THREE.Object3D {
   const placements = tilesOfType(map, ['rock']).map((tile) => placeRock(map, tile, theme));
-  return buildProps(ROCK_SHAPES, placements, { castShadow: true, receiveShadow: true });
+  return buildProps(ROCK_SHAPES, placements);
 }
 
 function placeRock(map: GameMap, tile: TileCoordinate, theme: Theme): PropPlacement {

@@ -237,10 +237,9 @@ Bots get tank-themed names and colours like players, show a small level-coloured
   - the map rotation can be changed too; the new order takes over after the current round
 - **In-game menu (others):** the same players and settings, read-only, plus *Leave game*.
 - **Player settings** (each player's own, unlike the host's game settings). There will be more of these over time, so they get their own space instead of being squeezed into other screens:
-  - a *Settings* button on the main menu and in the Esc menu (for everyone) opens one settings panel, in the same slab style, grouped into sections (e.g. Graphics, Audio, Controls)
+  - a *Settings* button on the main menu and in the Esc menu (for everyone) opens one settings panel, in the same slab style, grouped into sections (now Audio and Gameplay; later e.g. Controls)
   - everything is saved in `localStorage` and applies straight away
   - built: the panel also opens from the lobby footer, and Esc closes it before the menu underneath
-  - **Graphics:** High / Low
   - **Audio:** master, effects, announcer and menu volumes; letting go of a slider plays a sample at the new level
   - **Auto-switch weapons:** whether picking up a new weapon switches to it (on by default). The switch happens on the host, so the client sends a `preferences` message once it's in, and on every change, never a change to `JoinMetadata`, which must keep its shape for the version check
   - room for later ones, e.g. key bindings or camera shake
@@ -259,8 +258,8 @@ Bots get tank-themed names and colours like players, show a small level-coloured
 - **Camera:** tilted ~55°, following your tank so it stays centred. While you're dead it holds still, then snaps to your respawn point. No minimap.
 - **Tanks:** low-poly, built in code and tinted in each player's colour. Tracks animate as they move. Each weapon gets its own barrel shape.
 - **Name tags:** each tank shows its player's name and health bar.
-- **Lighting:** one sun with soft shadows plus ambient light, and a soft bloom glow on the brightest things (lava cracks, sparks, flames, lasers, muzzle flashes). Only colours brighter than white glow, so the flat-shaded look stays crisp.
-- **Graphics setting:** High / Low, on the main menu and in the Esc menu, saved in the browser. Low turns off shadows and bloom, draws at one pixel per screen pixel, and halves the particles.
+- **Lighting:** one sun plus ambient light, no shadows. Hot things (lava cracks, sparks, flames) use extra-bright colours to stand out.
+- **One graphics level:** the game draws at one pixel per screen pixel, without shadows or bloom, and spawns half the particles effects ask for. A High setting (sharp high-density rendering, shadows, bloom, full particles) was removed: it made laptop fans spin for little visible gain.
 
 ### Terrain look (low-poly, with variety)
 

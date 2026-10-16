@@ -10,7 +10,7 @@ const MAX_LEAN = 0.08;
 
 export function buildTrees(map: GameMap, theme: Theme): THREE.Object3D {
   const placements = tilesOfType(map, ['tree']).map((tile) => placeTree(map, tile, theme));
-  return buildProps(TREE_SHAPES, placements, { castShadow: true, receiveShadow: true });
+  return buildProps(TREE_SHAPES, placements);
 }
 
 function placeTree(map: GameMap, tile: TileCoordinate, theme: Theme): PropPlacement {

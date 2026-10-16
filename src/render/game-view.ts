@@ -5,7 +5,6 @@ import { nearestSafePoint } from '../sim/hazard-edge';
 import { isPickupWeapon, type ItemId } from '../sim/items';
 import { TERRAIN_RULES } from '../sim/terrain';
 import { createAimReticle, createTargetMarker } from './aim-reticle';
-import { Bloom } from './bloom';
 import { EffectsLayer } from './effects/effect';
 import { createExplosion } from './effects/explosion';
 import { createImpactPuff } from './effects/impact-puff';
@@ -17,12 +16,11 @@ import { createScorchMark } from './effects/scorch-mark';
 import { createWreck } from './effects/tank-wreck';
 import type { HazardFall } from './effects/wreck-model';
 import { FollowCamera } from './follow-camera';
-import { graphicsQuality, onGraphicsQualityChange, type GraphicsQuality } from './graphics-quality';
 import { NameTags } from './name-tags';
 import { WEAPON_COLORS } from './pickup-models';
 import { PickupView } from './pickup-view';
 import { ProjectileView } from './projectile-view';
-import { applyQuality, centreSunOn, createScene, type SceneParts } from './scene-setup';
+import { createScene, type SceneParts } from './scene-setup';
 import { BARREL_HEIGHT, TankModel } from './tank-model';
 import { LIQUID_LEVELS } from './terrain/liquids';
 import { buildTerrainView, type TerrainView } from './terrain/terrain-view';
@@ -33,7 +31,6 @@ import type { TankViewState, ViewState } from './view-state';
 const EXPLOSION_SHAKE = 0.5;
 const SHAKE_RANGE = 10;
 const POWERUP_SPARKLE_COLOR = 0xfff7ae;
-const LOW_QUALITY_PARTICLE_DENSITY = 0.5;
 
 export interface Point2D {
   x: number;
@@ -54,10 +51,7 @@ export class GameView {
   private readonly particles: ParticlePools = createParticlePools();
   private readonly trails = new ProjectileTrails(this.particles);
   private readonly nameTags: NameTags;
-  private readonly bloom: Bloom;
   private readonly onResize = () => this.resize();
-  private readonly stopWatchingQuality: () => void;
-  private quality: GraphicsQuality = graphicsQuality();
   private elapsed = 0;
 
   constructor(
@@ -80,9 +74,6 @@ export class GameView {
       this.particles.glow.mesh,
     );
     this.nameTags = new NameTags(container);
-    this.bloom = new Bloom(this.parts.renderer, this.parts.scene, this.followCamera.camera);
-    this.setQuality(this.quality);
-    this.stopWatchingQuality = onGraphicsQualityChange((quality) => this.setQuality(quality));
     window.addEventListener('resize', this.onResize);
     this.warmUp();
   }
@@ -98,8 +89,6 @@ export class GameView {
   /** Removes everything this view added to the page, so a new one can take over (e.g. on a map change). */
   dispose(): void {
     window.removeEventListener('resize', this.onResize);
-    this.stopWatchingQuality();
-    this.bloom.dispose();
     this.nameTags.dispose();
     this.parts.renderer.domElement.remove();
     this.parts.renderer.dispose();
@@ -165,21 +154,11 @@ export class GameView {
     this.nameTags.update(state.tanks, this.followCamera.camera);
     if (state.cameraFocus) this.followCamera.follow(state.cameraFocus.x, state.cameraFocus.y, frameDt);
     this.followCamera.updateShake(frameDt);
-    centreSunOn(this.parts.sun, this.followCamera.focusX, this.followCamera.focusZ);
     this.drawFrame();
   }
 
   private drawFrame(): void {
-    if (this.quality === 'high') this.bloom.render();
-    else this.parts.renderer.render(this.parts.scene, this.followCamera.camera);
-  }
-
-  private setQuality(quality: GraphicsQuality): void {
-    this.quality = quality;
-    applyQuality(this.parts, quality, this.container.clientWidth, this.container.clientHeight);
-    this.bloom.syncSize();
-    const density = quality === 'high' ? 1 : LOW_QUALITY_PARTICLE_DENSITY;
-    for (const pool of Object.values(this.particles)) pool.density = density;
+    this.parts.renderer.render(this.parts.scene, this.followCamera.camera);
   }
 
   private syncTanks(tanks: TankViewState[], frameDt: number): void {
@@ -244,7 +223,6 @@ export class GameView {
   private resize(): void {
     const { clientWidth, clientHeight } = this.container;
     this.parts.renderer.setSize(clientWidth, clientHeight);
-    this.bloom.syncSize();
     this.followCamera.resize(clientWidth / clientHeight);
   }
 }

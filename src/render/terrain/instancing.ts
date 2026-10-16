@@ -16,11 +16,6 @@ export interface InstancePlacement {
   color?: THREE.Color;
 }
 
-export interface ShadowOptions {
-  castShadow?: boolean;
-  receiveShadow?: boolean;
-}
-
 export function tilesOfType(map: GameMap, types: TerrainType[]): TileCoordinate[] {
   const tiles: TileCoordinate[] = [];
   map.terrain.forEach((terrain, index) => {
@@ -33,12 +28,9 @@ export function buildInstancedMesh(
   geometry: THREE.BufferGeometry,
   material: THREE.Material,
   placements: InstancePlacement[],
-  shadows: ShadowOptions = {},
 ): THREE.InstancedMesh {
   const mesh = new THREE.InstancedMesh(geometry, material, Math.max(placements.length, 1));
   mesh.count = placements.length;
-  mesh.castShadow = shadows.castShadow ?? false;
-  mesh.receiveShadow = shadows.receiveShadow ?? false;
 
   const transform = new THREE.Object3D();
   placements.forEach((placement, index) => {

@@ -30,6 +30,8 @@ interface Particle extends Required<ParticleSpawn> {
 /** Particles shrink away over this last share of their life rather than fading, which suits the solid art style. */
 const SHRINK_AWAY_SHARE = 0.25;
 const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
+/** Only this share of the particles asked for is made: plenty for the look, at half the cost. */
+const SPAWN_SHARE = 0.5;
 
 /**
  * A fixed number of small particles drawn together as one instanced mesh. When it's full, new particles
@@ -37,8 +39,6 @@ const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
  */
 export class ParticlePool {
   readonly mesh: THREE.InstancedMesh;
-  /** Share of requested particles actually made; lowered on low graphics. */
-  density = 1;
   private readonly particles: (Particle | null)[];
   private next = 0;
   private readonly transform = new THREE.Object3D();
@@ -53,7 +53,7 @@ export class ParticlePool {
   }
 
   spawn(spawn: ParticleSpawn): void {
-    if (this.density < 1 && Math.random() > this.density) return;
+    if (Math.random() > SPAWN_SHARE) return;
     const index = this.next;
     this.next = (this.next + 1) % this.particles.length;
     this.particles[index] = {

@@ -48,10 +48,6 @@ export class TankModel {
     this.barrel = buildBarrel(this.currentWeapon, this.materials.barrel);
     this.turret.add(this.barrel);
     this.root.add(this.hull, this.turret);
-    this.root.traverse((child) => {
-      child.castShadow = true;
-      child.receiveShadow = true;
-    });
     this.root.add(this.powerups.object);
   }
 

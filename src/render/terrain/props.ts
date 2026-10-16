@@ -50,27 +50,20 @@ export interface PropPlacement {
   colors: Record<string, THREE.Color>;
 }
 
-export interface PropOptions {
-  castShadow: boolean;
-  receiveShadow: boolean;
-}
-
 /** Draws every placement of every shape, using one instanced mesh per shape layer. */
-export function buildProps(shapes: Record<string, PropShape>, placements: PropPlacement[], options: PropOptions): THREE.Group {
+export function buildProps(shapes: Record<string, PropShape>, placements: PropPlacement[]): THREE.Group {
   const material = new THREE.MeshStandardMaterial({ roughness: 0.85, flatShading: true, vertexColors: true });
   const group = new THREE.Group();
   for (const [id, shape] of Object.entries(shapes)) {
     const ofShape = placements.filter((placement) => placement.shape === id);
     if (ofShape.length === 0) continue;
-    for (const shapeLayer of shape) group.add(instancedLayer(shapeLayer, ofShape, material, options));
+    for (const shapeLayer of shape) group.add(instancedLayer(shapeLayer, ofShape, material));
   }
   return group;
 }
 
-function instancedLayer(shapeLayer: ShapeLayer, placements: PropPlacement[], material: THREE.Material, options: PropOptions): THREE.InstancedMesh {
+function instancedLayer(shapeLayer: ShapeLayer, placements: PropPlacement[], material: THREE.Material): THREE.InstancedMesh {
   const mesh = new THREE.InstancedMesh(shapeLayer.geometry, material, placements.length);
-  mesh.castShadow = options.castShadow;
-  mesh.receiveShadow = options.receiveShadow;
   placements.forEach((placement, index) => {
     mesh.setMatrixAt(index, placementMatrix(placement));
     mesh.setColorAt(index, placement.colors[shapeLayer.role] ?? new THREE.Color(0xffffff));

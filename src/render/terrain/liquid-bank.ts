@@ -72,7 +72,6 @@ export function buildBank(map: GameMap, field: ShoreField, liquid: TerrainType, 
   geometry.computeVertexNormals();
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.receiveShadow = true;
   return mesh;
 }
 

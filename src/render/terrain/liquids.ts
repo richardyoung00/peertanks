@@ -87,5 +87,5 @@ function buildPitBeds(map: GameMap, theme: Theme): THREE.InstancedMesh {
     y: PIT_BED_TOP - PIT_BED_THICKNESS / 2,
     z: row + 0.5,
   }));
-  return buildInstancedMesh(geometry, material, placements, { receiveShadow: true });
+  return buildInstancedMesh(geometry, material, placements);
 }

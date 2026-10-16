@@ -16,7 +16,6 @@ const GUNMETAL = 0x3b3d40;
 export function createPickupModel(item: ItemId): THREE.Object3D {
   const model = new THREE.Group();
   BUILDERS[item](model);
-  model.traverse((child) => (child.castShadow = true));
   return model;
 }
 

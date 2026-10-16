@@ -27,7 +27,7 @@ export function buildFloor(map: GameMap, theme: Theme): THREE.Object3D {
   const geometry = new THREE.BoxGeometry(1, FLOOR_THICKNESS, 1);
   const material = new THREE.MeshStandardMaterial({ roughness: 0.95 });
   const group = new THREE.Group();
-  group.add(buildInstancedMesh(geometry, material, placements, { receiveShadow: true }));
+  group.add(buildInstancedMesh(geometry, material, placements));
   group.add(buildOuterGround(map, theme));
   return group;
 }
@@ -70,6 +70,5 @@ function buildOuterGround(map: GameMap, theme: Theme): THREE.Mesh {
   const ground = new THREE.Mesh(geometry, material);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(map.width / 2, OUTER_GROUND_HEIGHT, map.height / 2);
-  ground.receiveShadow = true;
   return ground;
 }

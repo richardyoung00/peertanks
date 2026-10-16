@@ -4,7 +4,7 @@ import { debris, flames, smoke, sparks } from './particle-bursts';
 import type { ParticlePools } from './particles';
 
 const FIREBALL_SECONDS = 0.35;
-/** Brighter than white, so bloom makes the fireball glow. */
+/** Extra bright, so the fireball stands out. */
 const FIREBALL_GLOW = 1.15;
 const SHOCKWAVE_SECONDS = 0.45;
 const fireballGeometry = new THREE.IcosahedronGeometry(1, 1);

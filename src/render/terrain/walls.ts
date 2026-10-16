@@ -28,7 +28,7 @@ export function buildWalls(map: GameMap, theme: Theme): THREE.Object3D {
   const group = new THREE.Group();
   const blockGeometry = new THREE.BoxGeometry(1, WALL_HEIGHT, 1);
   const capGeometry = new THREE.BoxGeometry(CAP_OVERHANG, CAP_HEIGHT, CAP_OVERHANG);
-  group.add(buildInstancedMesh(blockGeometry, material, blocks, { castShadow: true, receiveShadow: true }));
-  group.add(buildInstancedMesh(capGeometry, material, caps, { castShadow: true, receiveShadow: true }));
+  group.add(buildInstancedMesh(blockGeometry, material, blocks));
+  group.add(buildInstancedMesh(capGeometry, material, caps));
   return group;
 }

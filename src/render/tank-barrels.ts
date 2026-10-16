@@ -54,6 +54,5 @@ export function buildBarrel(weapon: WeaponId, material: THREE.Material): THREE.G
       break;
     }
   }
-  barrel.traverse((child) => (child.castShadow = true));
   return barrel;
 }

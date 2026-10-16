@@ -4,15 +4,13 @@ import { playOptionChanged } from '../audio/synth-sounds';
 import { VOLUMES } from '../audio/volume-settings';
 import { weaponAutoSwitch } from '../settings/weapon-auto-switch';
 import { element } from './dom';
-import { renderGraphicsToggle } from './graphics-toggle';
 import { renderPillChoice } from './pill-choice';
 import { createVolumeSlider } from './volume-slider';
 
 let listeningForEscape = false;
 
-/** Opens the player's own settings (graphics, audio, gameplay) on top of whatever screen is showing. */
+/** Opens the player's own settings (audio, gameplay) on top of whatever screen is showing. */
 export function openPlayerSettings(): void {
-  renderGraphicsToggle(element('player-settings-graphics'));
   renderAudioSection(element('player-settings-audio'));
   renderPillChoice(
     element('player-settings-auto-switch'),

@@ -48,7 +48,6 @@ export function createProjectileModel(kind: ProjectileKind): THREE.Object3D {
   const add = (geometry: THREE.BufferGeometry, material: THREE.Material, x = 0, y = 0) => {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(x, y, 0);
-    mesh.castShadow = true;
     group.add(mesh);
   };
 
