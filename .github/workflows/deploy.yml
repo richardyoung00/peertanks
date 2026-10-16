@@ -36,6 +36,10 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+        env:
+          TURN_SERVER: ${{ secrets.TURN_SERVER }}
+          TURN_USERNAME: ${{ secrets.TURN_USERNAME }}
+          TURN_PASSWORD: ${{ secrets.TURN_PASSWORD }}
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - name: Upload artifact
