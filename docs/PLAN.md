@@ -1,6 +1,6 @@
 # Tanks Game – Plan
 
-A browser-based, peer-to-peer, free-for-all tank shooter. The game rules are 2D and the graphics are 3D. It is hosted as static files on GitHub Pages at https://richardyoung.co.za/peertanks/. See [README.md](../README.md) for the original game ideas.
+A browser-based, peer-to-peer, free-for-all tank shooter. The game rules are 2D and the graphics are 3D. It is hosted as static files on GitHub Pages at https://richardyoung.co.za/peertanks/.
 
 ## 1. Decisions so far
 
@@ -76,8 +76,13 @@ tools/
 
 **Data flow**
 - Clients send **inputs** every tick (60 per second), repeating the last 3 in each packet in case one is lost.
-- **Two channels per player:** PeerJS's reliable channel carries the welcome, join/leave, events and pings. A "fast" channel we open ourselves never resends lost packets, and carries inputs and snapshots. The host only sends on it once the client has sent something, which avoids a start-up race that could break the connection.
-- The host sends **snapshots** 20 times a second, in compact binary: about 13 bytes per tank and 10 per projectile. With 7 clients the host uploads roughly 45 KB/s.
+- **Three channels per player:**
+  - PeerJS's reliable channel carries JSON: the welcome, join/leave, scores, settings and pings. Its shape is what the version check relies on, so it stays JSON.
+  - A **fast** channel we open ourselves never resends lost packets, and carries inputs and snapshots.
+  - An **events** channel we open ourselves resends lost packets but doesn't keep them in order, so one lost packet never holds up the rest. It carries game events (shots, hits, kills, explosions) in compact binary, with players as 1-byte net ids. The host gathers each tick's events and sends them with every snapshot; each group carries its tick, so the order they arrive in doesn't matter.
+  - The client creates both of our channels at once, and the host only sends on them once the client has sent something on the fast channel, which avoids a start-up race that could break the connection.
+- The host sends **snapshots** 20 times a second, in compact binary: 16 bytes per tank and 13 per projectile.
+- **Bandwidth** (measured in 8-bot games): each player gets about 5 KB/s (snapshots ~4.7, events ~0.3, scores ~0.3), so with 7 clients the host uploads roughly 35 KB/s. Clients send about 2.3 KB/s of inputs. Dev builds log the host's traffic by message type to the console every 10 s.
 - The host sends the whole map in the welcome message, so players can join games on maps they don't have.
 - **Disconnects** are picked up early: closing the tab closes the connection properly. Otherwise a player silent for 5 s is dropped, and a client with no snapshots for 5 s sees "lost connection".
 - **Frozen tabs:** if a page freezes for seconds (e.g. compiling graphics on a slow machine), the next silence check is skipped instead of blaming the network. Joining players also get 15 s before the host gives up on them.
@@ -354,28 +359,6 @@ Each milestone ends with something playable to check.
    - Meadow without lava
    - volcanic and snow themes, with a map for each (no new tile types were needed)
    - the bigger map picker is deferred: with three maps the strip is enough
-## 14. Optimisation (later)
-  Network data
-
-  Measure what's actually sent per second, split by message type: snapshots, inputs, events and the welcome message (which carries the whole map).
-  Snapshots and inputs are already compact binary, so BSON wouldn't help much; it's usually bigger than our hand-packed format. The better candidates are:
-  Delta snapshots: only send tanks and projectiles that changed since the last snapshot the client confirmed.
-  JSON messages (events, welcome, scores): try a binary encoding, or compression for the large one-off welcome. Browsers have built-in gzip via CompressionStream.
-  Slower connections: send fewer snapshots (e.g. 10 a second instead of 20) to players with high ping or packet loss, and lean more on interpolation.
-  Download size
-
-  Rapier's WASM, embedded as base64, is most of the ~1.5 MB gzipped download. Check for:
-  a non-base64 build loaded as a separate .wasm file, which is smaller and cached separately
-  a lighter 2D physics option (we use little beyond colliders, ray casts and dynamic bodies)
-  three.js: check that unused parts are tree-shaken out.
-  Split code that isn't needed at start, such as menus versus the game, so the first load is lighter.
-  Assets
-
-  Compress and resize any images (WebP or AVIF where supported).
-  Encode audio for the web, e.g. Opus or OGG at a sensible bitrate, trimmed and normalised.
-  Fonts: load only the characters and weights actually used.
-  How to judge it: record the bundle size and the per-player bandwidth before and after each change.
-
 ## 12. Risks
 
 - **PeerJS public signalling server** can be rate-limited or go down. Trystero is the fallback.
@@ -388,3 +371,32 @@ Each milestone ends with something playable to check.
 
 1. ~~Milestone order~~: weapons before the lobby.
 2. ~~Terrain polish timing~~: stays at milestone 7.
+
+## 14. Optimisation
+
+### Network data
+
+Measured in headless 8-bot games on each map, before any changes: about 9 KB/s to each player. Events were nearly half of it, as JSON naming players by their 36-character PeerJS ids (a shot was 159 bytes), and they went over the ordered reliable channel, so a lost packet held up every event behind it.
+
+- **Done:** events moved to their own binary channel and batched with snapshots (see §3). Events went from ~4 KB/s to ~0.3 KB/s per player, about 40% less traffic overall.
+- **Done:** a dev-only traffic log, so real games can be checked before and after a change.
+- **Not doing for now:**
+  - *Delta snapshots* (only send what changed): tanks move all the time, so most of each snapshot changes anyway. It would save perhaps 20–30% of snapshot data, but needs per-player acks and baselines.
+  - *Compressing the welcome:* it's 8.8 KB once per map (0.7 KB gzipped), so it isn't worth the code.
+  - *Fewer snapshots for slow players:* at ~5 KB/s, bandwidth isn't the limit. High ping is a delay problem, and sending less data doesn't make it faster.
+
+### Download size
+
+- Rapier's WASM, embedded as base64, is most of the ~1.5 MB gzipped download. Check for:
+  - a non-base64 build loaded as a separate `.wasm` file, which is smaller and cached separately
+  - a lighter 2D physics option (we use little beyond colliders, ray casts and dynamic bodies)
+- three.js: check that unused parts are tree-shaken out.
+- Split code that isn't needed at start, such as menus versus the game, so the first load is lighter.
+
+### Assets
+
+- Compress and resize any images (WebP or AVIF where supported).
+- Encode audio for the web, e.g. Opus or OGG at a sensible bitrate, trimmed and normalised.
+- Fonts: load only the characters and weights actually used.
+
+**How to judge it:** record the bundle size and the per-player bandwidth before and after each change.

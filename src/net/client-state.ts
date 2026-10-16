@@ -7,10 +7,14 @@ import type { MapPoint } from '../sim/game-map';
 import { POWERUP_IDS, type ItemId } from '../sim/items';
 import type { PlayerScore } from '../sim/scores';
 import type { WelcomeMessage } from './client-session';
+import { decodeEventPacket } from './events-packet';
 import type { PlayerInfo } from './messages';
 import type { RoundSnapshot, Snapshot, TankSnapshot } from './packets';
 import { LocalPrediction } from './prediction';
 import { SnapshotTimeline } from './snapshot-timeline';
+
+// Stands in for a player we haven't heard of yet, e.g. an event that overtook the news that they joined.
+const UNKNOWN_PLAYER_PREFIX = 'unknown-';
 
 interface QueuedEvents {
   time: number;
@@ -96,9 +100,11 @@ export class ClientGameState {
     return jumped || firstState;
   }
 
-  queueEvents(tick: number, events: GameEvent[]): void {
-    if (tick < this.startTick) return;
-    this.queuedEvents.push({ time: tick * SIM_DT, events });
+  receiveEvents(packet: ArrayBuffer): void {
+    const playerIdOf = (netId: number) => this.playerByNetId(netId)?.id ?? `${UNKNOWN_PLAYER_PREFIX}${netId}`;
+    for (const { tick, events } of decodeEventPacket(packet, playerIdOf)) {
+      if (tick >= this.startTick) this.queuedEvents.push({ time: tick * SIM_DT, events });
+    }
   }
 
   /** Events whose moment has come in the (slightly delayed) view of other players. */

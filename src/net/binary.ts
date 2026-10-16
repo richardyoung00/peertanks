@@ -12,8 +12,9 @@ function clampUint16(value: number): number {
   return Math.max(0, Math.min(65535, Math.round(value)));
 }
 
+/** Grows if more is written than the starting capacity. */
 export class ByteWriter {
-  private readonly view: DataView;
+  private view: DataView;
   private offset = 0;
 
   constructor(capacity: number) {
@@ -21,26 +22,31 @@ export class ByteWriter {
   }
 
   u8(value: number): void {
+    this.reserve(1);
     this.view.setUint8(this.offset, value);
     this.offset += 1;
   }
 
   i8(value: number): void {
+    this.reserve(1);
     this.view.setInt8(this.offset, value);
     this.offset += 1;
   }
 
   u16(value: number): void {
+    this.reserve(2);
     this.view.setUint16(this.offset, value);
     this.offset += 2;
   }
 
   i16(value: number): void {
+    this.reserve(2);
     this.view.setInt16(this.offset, value);
     this.offset += 2;
   }
 
   u32(value: number): void {
+    this.reserve(4);
     this.view.setUint32(this.offset, value);
     this.offset += 4;
   }
@@ -63,6 +69,14 @@ export class ByteWriter {
 
   finish(): ArrayBuffer {
     return this.view.buffer.slice(0, this.offset) as ArrayBuffer;
+  }
+
+  private reserve(bytes: number): void {
+    const needed = this.offset + bytes;
+    if (needed <= this.view.byteLength) return;
+    const grown = new Uint8Array(Math.max(needed, this.view.byteLength * 2));
+    grown.set(new Uint8Array(this.view.buffer, 0, this.offset));
+    this.view = new DataView(grown.buffer);
   }
 }
 

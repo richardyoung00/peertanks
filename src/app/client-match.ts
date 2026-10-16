@@ -106,6 +106,7 @@ export class ClientMatch {
 
   private sessionListener(): ClientSessionListener {
     return {
+      onEvents: (packet) => this.state.receiveEvents(packet),
       onSnapshot: (snapshot) => {
         const jumped = this.state.receiveSnapshot(snapshot, nowSeconds());
         if (!jumped) return;
@@ -128,9 +129,6 @@ export class ClientMatch {
             state.removePlayer(message.playerId);
             break;
           }
-          case 'events':
-            state.queueEvents(message.tick, message.events);
-            break;
           case 'scores':
             state.scores = message.scores;
             break;

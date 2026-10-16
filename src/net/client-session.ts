@@ -2,7 +2,7 @@ import type Peer from 'peerjs';
 import type { DataConnection } from 'peerjs';
 import { BUILD } from '../build-info';
 import { NETWORK } from '../config';
-import { openFastChannel, sendIfOpen } from './fast-channel';
+import { openGameChannels, sendIfOpen } from './game-channels';
 import { isHostMessage, type ClientMessage, type HostMessage, type JoinMetadata } from './messages';
 import { decodePacket, encodeInputPacket, type InputFrame, type Snapshot } from './packets';
 import { closeOnPageExit, hostPeerId, openClientPeer } from './peer';
@@ -16,6 +16,8 @@ export interface ClientSessionListener {
   onMessage(message: HostMessage): void;
   onDisconnected(reason: string): void;
   onSnapshot?(snapshot: Snapshot): void;
+  /** A batch of the host's events, still encoded: only the game state can turn net ids back into players. */
+  onEvents?(packet: ArrayBuffer): void;
   onPing?(roundTripMs: number): void;
 }
 
@@ -26,7 +28,7 @@ const GAME_ENDED = 'The host ended the game.';
 
 /**
  * A joining player's side of the network. Messages are held until someone is listening, so nothing is lost
- * while switching between the lobby and the game. The fast channel only opens once the game starts.
+ * while switching between the lobby and the game. The fast and event channels only open once the game starts.
  */
 export class ClientSession {
   private listener: ClientSessionListener | null = null;
@@ -76,16 +78,17 @@ export class ClientSession {
     this.listener = null;
   }
 
-  async openFastChannel(): Promise<void> {
-    const channel = await openFastChannel(this.connection.peerConnection);
+  async openGameChannels(): Promise<void> {
+    const channels = await openGameChannels(this.connection.peerConnection);
     this.lastSnapshotAt = performance.now();
-    channel.addEventListener('message', (event: MessageEvent<ArrayBuffer>) => {
+    channels.fast.addEventListener('message', (event: MessageEvent<ArrayBuffer>) => {
       const packet = decodePacket(event.data);
       if (packet?.type !== 'snapshot') return;
       this.lastSnapshotAt = performance.now();
       this.listener?.onSnapshot?.(packet.snapshot);
     });
-    this.fastChannel = channel;
+    channels.events.addEventListener('message', (event: MessageEvent<ArrayBuffer>) => this.listener?.onEvents?.(event.data));
+    this.fastChannel = channels.fast;
   }
 
   sendPreferences(autoSwitchWeapons: boolean): void {

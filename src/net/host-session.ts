@@ -8,13 +8,15 @@ import type { GameEvent } from '../sim/game-events';
 import type { GameSettings } from '../sim/game-settings';
 import type { GameWorld } from '../sim/game-world';
 import type { PlayerInput } from '../sim/player-input';
-import { openFastChannel, sendIfOpen } from './fast-channel';
+import { encodeEventPacket, type EventGroup } from './events-packet';
+import { openGameChannels, sendIfOpen, type GameChannels } from './game-channels';
 import { InputQueue } from './input-queue';
 import { isClientMessage, type HostMessage, type JoinMetadata, type PlayerInfo } from './messages';
 import { decodePacket, encodeSnapshot } from './packets';
 import { Roster } from './roster';
 import { buildSnapshot, ownStatusOf } from './snapshot-builder';
 import { StallGuard } from './stall-guard';
+import { TrafficMeter } from './traffic-meter';
 import { OUTDATED_HOST_MESSAGE, OUTDATED_JOINER_MESSAGE, type RejectionCode } from './version-check';
 
 // Time for a last message (kicked, rejected, game ended) to arrive before hanging up.
@@ -24,12 +26,12 @@ const SILENCE_CHECK_INTERVAL_MS = NETWORK.silenceTimeoutMs / 5;
 interface RemotePlayer {
   info: PlayerInfo;
   connection: DataConnection;
-  fastChannel: RTCDataChannel;
+  channels: GameChannels;
   inputs: InputQueue;
   lastHeardAt: number;
   /**
-   * The client creates its end of the fast channel slightly after we do, and data arriving before then
-   * can break the whole connection. So we only send once the client has sent us something on it.
+   * The client creates its end of our channels slightly after we do, and data arriving before then can break
+   * the whole connection. So we only send on them once the client has sent us something on the fast channel.
    */
   fastChannelConfirmed: boolean;
   /** When this player was last sent a map. Building it can freeze a slow machine for a while. */
@@ -59,6 +61,9 @@ export class HostSession {
   /** Players who turned off switching to new weapons. Kept here so it carries over to each new map. */
   private readonly autoSwitchOff = new Set<string>();
   private readonly stallGuard = new StallGuard(SILENCE_CHECK_INTERVAL_MS);
+  /** This tick's and the last few ticks' events, sent along with the next snapshot. */
+  private pendingEvents: EventGroup[] = [];
+  private readonly traffic = import.meta.env.DEV ? new TrafficMeter('Host network traffic') : null;
 
   constructor(
     peer: Peer,
@@ -94,6 +99,7 @@ export class HostSession {
     this.world = world;
     this.mapId = mapId;
     this.sentScoresVersion = -1;
+    this.pendingEvents = [];
     for (const player of this.roster.all) this.addTank(world, player);
     for (const player of this.remotePlayers.values()) this.sendWelcome(player);
   }
@@ -142,11 +148,14 @@ export class HostSession {
     return inputs;
   }
 
-  /** Sends this tick's events, plus a snapshot every few ticks. */
+  /** Every few ticks, sends a snapshot and the events since the last one. */
   broadcastTick(events: GameEvent[]): void {
     if (!this.world) return;
-    if (events.length > 0) this.broadcast({ type: 'events', tick: this.world.tick, events });
-    if (this.world.tick % NETWORK.snapshotEveryTicks === 0) this.sendSnapshots(this.world);
+    if (events.length > 0) this.pendingEvents.push({ tick: this.world.tick, events });
+    if (this.world.tick % NETWORK.snapshotEveryTicks === 0) {
+      this.sendPendingEvents();
+      this.sendSnapshots(this.world);
+    }
     this.broadcastScoresIfChanged(this.world);
   }
 
@@ -160,11 +169,11 @@ export class HostSession {
     }
     if (this.roster.isFull) return this.reject(connection, 'full', 'This game is full.');
 
-    let fastChannel: RTCDataChannel;
+    let channels: GameChannels;
     try {
-      fastChannel = await openFastChannel(connection.peerConnection);
+      channels = await openGameChannels(connection.peerConnection);
     } catch (error) {
-      console.warn('Dropping player whose fast channel failed to open', error);
+      console.warn('Dropping player whose game channels failed to open', error);
       connection.close();
       return;
     }
@@ -173,7 +182,7 @@ export class HostSession {
     const player: RemotePlayer = {
       info,
       connection,
-      fastChannel,
+      channels,
       inputs: new InputQueue(),
       lastHeardAt: performance.now(),
       fastChannelConfirmed: false,
@@ -235,9 +244,10 @@ export class HostSession {
   }
 
   private listenTo(player: RemotePlayer): void {
-    player.fastChannel.addEventListener('message', (event: MessageEvent<ArrayBuffer>) => {
+    player.channels.fast.addEventListener('message', (event: MessageEvent<ArrayBuffer>) => {
       player.lastHeardAt = performance.now();
       player.fastChannelConfirmed = true;
+      this.traffic?.count('inputs (received)', event.data.byteLength);
       const packet = decodePacket(event.data);
       if (packet?.type === 'input') player.inputs.add(packet.frames);
     });
@@ -296,13 +306,25 @@ export class HostSession {
     this.broadcast({ type: 'scores', scores: world.scores.all });
   }
 
+  private sendPendingEvents(): void {
+    if (this.pendingEvents.length === 0) return;
+    const packet = encodeEventPacket(this.pendingEvents, (id) => this.roster.netIdOf(id));
+    this.pendingEvents = [];
+    for (const player of this.remotePlayers.values()) {
+      if (!player.fastChannelConfirmed) continue;
+      sendIfOpen(player.channels.events, packet);
+      this.traffic?.count('events', packet.byteLength);
+    }
+  }
+
   private sendSnapshots(world: GameWorld): void {
     const snapshot = buildSnapshot(world, this.roster);
     for (const player of this.remotePlayers.values()) {
       if (!player.fastChannelConfirmed) continue;
       const own = ownStatusOf(world.tanks.get(player.info.id));
       const packet = encodeSnapshot({ ...snapshot, ackSeq: player.inputs.lastAppliedSeq, own });
-      sendIfOpen(player.fastChannel, packet);
+      sendIfOpen(player.channels.fast, packet);
+      this.traffic?.count('snapshot', packet.byteLength);
     }
   }
 
@@ -313,6 +335,8 @@ export class HostSession {
   }
 
   private send(connection: DataConnection, message: HostMessage): void {
-    if (connection.open) connection.send(message);
+    if (!connection.open) return;
+    connection.send(message);
+    this.traffic?.count(message.type, JSON.stringify(message).length);
   }
 }

@@ -14,6 +14,6 @@ export async function startClientGame(name: string, code: string, container: HTM
   showJoinLinkInAddressBar(code);
   const art = await loadMenuArt();
   const welcome = first.type === 'welcome' ? first : await waitInLobby(session, first, code, art);
-  await session.openFastChannel();
+  await session.openGameChannels();
   new ClientMatch(session, container, code, art, welcome).start();
 }

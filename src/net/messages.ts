@@ -1,6 +1,5 @@
 import type { BotLevel } from '../bots/bot-level';
 import type { BuildInfo } from '../build-info';
-import type { GameEvent } from '../sim/game-events';
 import type { GameMap } from '../sim/game-map';
 import type { GameSettings } from '../sim/game-settings';
 import type { PlayerScore } from '../sim/scores';
@@ -49,7 +48,6 @@ export type HostMessage =
   | { type: 'gameEnded' }
   | { type: 'playerJoined'; player: PlayerInfo }
   | { type: 'playerLeft'; playerId: string }
-  | { type: 'events'; tick: number; events: GameEvent[] }
   | { type: 'scores'; scores: PlayerScore[] }
   | { type: 'pong'; sentAt: number };
 
