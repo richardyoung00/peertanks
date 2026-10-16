@@ -209,14 +209,15 @@ Bots get tank-themed names and colours like players, show a small level-coloured
   - **objects:** spawn points and pickup spots. A pickup spot can have `items` (the subset to choose from; empty means everything) and `respawnSeconds`.
 - One map is one self-contained `.json` file, so maps can be shared. The game turns tile types into 3D models.
 - Maps are checked when they load (spawns exist, size within limits, tile types known).
-- Maps so far: "Meadow" (28×20, small) and "Crossroads" (36×26, medium: a river with three bridges). New maps are listed in `public/maps/index.json`.
-- **More maps (planned):**
-  - Meadow loses its lava pool and stays all green (water, trees and rocks only)
-  - new maps in new themes, e.g. a **volcanic** map (dark volcanic rock, ash, lava) and a **snow** map (snowfields, pines, frozen ponds)
-  - new themes reuse the existing tile types where they play the same (a snowy rock is still a rock). A genuinely new tile type is only added if it plays differently (e.g. slippery ice), and that's decided when the map is designed
-- **Map picker for a longer list:** the lobby's map strip already scrolls sideways; with many maps it either keeps scrolling with clear arrows and the selected maps summarised, or opens a bigger selection panel (a grid of map cards with size and theme). To be decided when there are enough maps to need it.
+- Maps so far, all 28×20 (small) and the same when turned half a turn, so no spawn has an advantage. They are listed in `public/maps/index.json`:
+  - **Meadow** (grassland): two ponds, open centre with four short walls
+  - **Frostbite** (snow): a frozen lake in the middle, pine groves, snowy rocks and broken walls
+  - **Caldera** (volcanic): a stepped lava fissure across the map, crossable in the middle and around both ends
+- Crossroads (36×26, a river with three bridges) was dropped; the tests keep frozen copies of it and of Meadow-with-lava in `tests/fixtures`, so redesigning a map never breaks them. `tests/maps.test.ts` checks every listed map loads, has 8 spawns, and keeps spawns and pickups on open floor.
+- New themes reuse the existing tile types where they play the same (a snowy rock is still a rock). A genuinely new tile type is only added if it plays differently (e.g. slippery ice), and that's decided when the map is designed.
+- **Map picker for a longer list:** the lobby's map strip fits three cards and scrolls sideways beyond that; with many maps it either keeps scrolling with clear arrows and the selected maps summarised, or opens a bigger selection panel (a grid of map cards with size and theme). To be decided when there are enough maps to need it.
 - Changing map between rounds replaces the host's world, and everyone gets a fresh welcome for the new map. The tick count carries on, so leftover messages from the old map are ignored.
-- **Themes:** each map has a `theme` (now `grassland`; later e.g. snow, lava, jungle). The theme sets the palette and which shapes are used for each tile type. A tree is a pine in snow and a palm in the jungle, but behaves the same in the game. A new theme should only need a theme file.
+- **Themes:** each map has a `theme` (`grassland`, `snow` or `volcanic`; later maybe e.g. jungle). The theme sets the palette and which shapes are used for each tile type. A tree is a pine in snow and a palm in the jungle, but behaves the same in the game. A new theme should only need a theme file.
 
 ## 7. Menus and UI
 
@@ -350,10 +351,10 @@ Each milestone ends with something playable to check.
 8. ✅ **Audio and player settings:**
    - sound effects, announcer
    - the player settings panel (graphics, audio volumes, auto-switch weapons)
-9. **More maps and themes:**
+9. ✅ **More maps and themes:**
    - Meadow without lava
-   - volcanic and snow themes, with a map for each (and new tile types only where they play differently)
-   - a map picker that copes with a long list
+   - volcanic and snow themes, with a map for each (no new tile types were needed)
+   - the bigger map picker is deferred: with three maps the strip is enough
 ## 14. Optimisation (later)
   Network data
 

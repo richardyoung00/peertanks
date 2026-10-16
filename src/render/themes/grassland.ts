@@ -14,6 +14,7 @@ export const grassland: Theme = {
     trunk: 0x7a5230,
     deadWood: 0x8a7560,
     leaves: [0x3f8f4a, 0x4ea357, 0x5cb160],
+    snow: 0xf2f6fa,
     shapes: { pine: 3, round: 3, conifer: 2, bush: 2, dead: 0.4 },
   },
   water: { shallow: 0x5cc4e8, deep: 0x1f6f9e, foam: 0xf2fbff, sand: 0xd9c38c, wetSand: 0xb19a68, bed: 0x2d5f6e },

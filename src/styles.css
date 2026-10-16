@@ -437,8 +437,9 @@ input {
   font-size: 11px;
 }
 
-.weapon-slot.empty {
-  opacity: 0.35;
+/* Only the text fades, so the dark slot still stands out on bright maps like snow. */
+.weapon-slot.empty > * {
+  opacity: 0.4;
 }
 
 .weapon-slot.selected {

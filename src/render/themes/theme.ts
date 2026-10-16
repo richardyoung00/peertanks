@@ -14,10 +14,13 @@ export interface Theme {
     /** Patches of bare ground, and of lusher, darker grass, drift across the floor. */
     bare: number;
     lush: number;
+    /** How much each tile's lightness wanders (default 0.025). Dark floors need less, or they look blotchy. */
+    tileVariation?: number;
   };
   wall: { side: number; top: number };
+  /** `moss` colours the cap on mossy rocks; a snow theme makes it white. */
   rocks: { colors: number[]; moss: number; shapes: ShapeWeights<RockShapeId> };
-  trees: { trunk: number; deadWood: number; leaves: number[]; shapes: ShapeWeights<TreeShapeId> };
+  trees: { trunk: number; deadWood: number; leaves: number[]; snow: number; shapes: ShapeWeights<TreeShapeId> };
   water: {
     shallow: number;
     deep: number;

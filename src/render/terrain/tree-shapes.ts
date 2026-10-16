@@ -47,7 +47,16 @@ const dead: PropShape = [
   ]),
 ];
 
-export const TREE_SHAPES = { pine, round, conifer, bush, dead };
+/** A pine with snow settled on the upper side of each tier. */
+const snowyPine: PropShape = [
+  ...pine,
+  layer('snow', [
+    part(new THREE.ConeGeometry(0.34, 0.4, 7), { position: [0, 0.69, 0] }),
+    part(new THREE.ConeGeometry(0.22, 0.3, 7), { position: [0, 1.1, 0], shade: 1.04 }),
+  ]),
+];
+
+export const TREE_SHAPES = { pine, round, conifer, bush, dead, snowyPine };
 
 export type TreeShapeId = keyof typeof TREE_SHAPES;
 

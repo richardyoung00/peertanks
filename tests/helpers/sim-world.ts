@@ -1,5 +1,6 @@
-import arenaJson from '../../public/maps/arena-01.json';
-import crossroadsJson from '../../public/maps/crossroads.json';
+// Frozen copies of the original maps, so the tests don't change when the game's maps are redesigned.
+import arenaJson from '../fixtures/meadow-with-lava.json';
+import crossroadsJson from '../fixtures/crossroads.json';
 import type { GameEvent } from '../../src/sim/game-events';
 import type { GameMap } from '../../src/sim/game-map';
 import { defaultSettings, type GameSettings } from '../../src/sim/game-settings';

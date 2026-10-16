@@ -1,7 +1,9 @@
 import { grassland } from './grassland';
+import { snow } from './snow';
 import type { Theme } from './theme';
+import { volcanic } from './volcanic';
 
-const THEMES: Record<string, Theme> = { grassland };
+const THEMES: Record<string, Theme> = { grassland, snow, volcanic };
 
 export function getTheme(name: string): Theme {
   const theme = THEMES[name];

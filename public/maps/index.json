@@ -4,7 +4,11 @@
     "name": "Meadow"
   },
   {
-    "id": "crossroads",
-    "name": "Crossroads"
+    "id": "frostbite",
+    "name": "Frostbite"
+  },
+  {
+    "id": "caldera",
+    "name": "Caldera"
   }
 ]

@@ -9,7 +9,7 @@ const FLOOR_THICKNESS = 0.3;
 const OUTER_GROUND_SIZE = 200;
 const OUTER_GROUND_HEIGHT = -0.32;
 const HUE_JITTER = 0.012;
-const LIGHTNESS_JITTER = 0.025;
+const DEFAULT_TILE_VARIATION = 0.025;
 /** Ground this many tiles from lava picks up a warm glow, strongest right beside it. */
 const LAVA_WARMTH_REACH = 2;
 const LAVA_WARMTH = 0.2;
@@ -49,7 +49,7 @@ function floorColor(map: GameMap, column: number, row: number, theme: Theme): TH
   color.lerp(new THREE.Color(theme.floor.bare), bareness(column, row) * 0.4);
   color.lerp(new THREE.Color(theme.lava.warmth), lavaWarmth(map, column, row));
   const hue = (tileRandom(column, row, 1) - 0.5) * 2 * HUE_JITTER;
-  const lightness = (tileRandom(column, row, 4) - 0.5) * 2 * LIGHTNESS_JITTER;
+  const lightness = (tileRandom(column, row, 4) - 0.5) * 2 * (theme.floor.tileVariation ?? DEFAULT_TILE_VARIATION);
   return color.offsetHSL(hue, 0, lightness);
 }
 

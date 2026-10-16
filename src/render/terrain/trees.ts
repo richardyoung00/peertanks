@@ -32,6 +32,7 @@ function placeTree(map: GameMap, tile: TileCoordinate, theme: Theme): PropPlacem
       trunk: varyColor(theme.trees.trunk, tileRandom(column, row, 38), 0.04),
       deadWood: varyColor(theme.trees.deadWood, tileRandom(column, row, 39), 0.05),
       leaves: varyColor(leaves, tileRandom(column, row, 33), 0.05),
+      snow: varyColor(theme.trees.snow, tileRandom(column, row, 40), 0.02),
     },
   };
 }
