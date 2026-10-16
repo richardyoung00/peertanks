@@ -1,87 +1,73 @@
-Game idea:
-- top down tank-style shooter similar to blocktanks.
-- each user has their own tank that is centered on the screen, they use the arrow keys to move. Movement is relative to the screen and not relative to the position of the tank. i.e. the left arrow makes the tank move to the left of the screen.
-- the player uses the mouse cursor to point the turret. The turret always points toward the cursor.
-- clicking the mouse button fires the weapon.
-- the user collects weapons and ammo on the map.
-- the user has a base cannon fire that never runs out of ammo.
-- the map is a constrained fixed size arena with areas where the players can and cannot move.
-- Some weapons bullets do not pass through terrain (mountains, trees etc)
-- some weapons can be thrown over terrain (like mortars)
-- certain areas of the map cause the player do die, like walking into lava or water or off a cliff.
-- some weapons need to be able to bounce off terrain, for example a single bullet that can bounce 2 times in a straight line, or a lazer that can deflect a fixed number of times.
-- each user has a fixed health, and various weapons deplete different amounts of health. Things like rockets or grenades should kill immediately, unless the user is further away from the explosion. SOme weapons like the default cannon would require 10 shots to kill a player on full health.
-- players need to make use of map terrain, dodging bullets, and weapons strategically to kill other players.
-- killing another player gives you a point on the score board, and the other player respawns after a small delay.
-- when a player respawns they have a short period of invulnerability to avoid being killed immediately.
-- the initial game mode should just be free for all.
-- the game has rounds that are times to 3 minutes and the player with the highest score at the end of the round wins.
-- users can join or leave rounds at any time. leaving and rejoining resets you score.
-- try to keep the game fun to play, with funny animations, sound effects and quirks, and fun voice prompts when a player is killed.
-- player names and current health bar should be visible to other players
-- weapon ideas:
-    - basic cannon that fires a projectile slowy in a straight line, dissappears on contact with terrain or player.
-    - rocket that fires in straight line, explodes on contact causing area damage.
-    - genade that can be thrown, bounces off terrain, distance thrown is determined by how long you hold the mouse button down. Max of 3 seconds throws it furthest disance.
-    - mortars that can fly over terrain.
-    - lasers that fire instantly in a straight line and bounce 3 times.
-    - cannon with bouncy bullets that fly in a straigh line and bounce 3 times.
-    - machine gun that fires rapidly, but bulets do less damage.
+# Tanks
 
-Game architecture
-- this game must be a client side only game that only needs static javascript to run.
-- the javascript app must contain code for both hosting and joining a game.
-- communication should be done p2p using webrtc, making use of libraries like peerJS.
-- the host should contain the final source of truth, however clients can do optimistic calculations.
-- there need not be a huge amount of errort to prevent people from cheating or manipulating the JS state, tis can be added later.
-- the game will be hosted statically on github pages.
-- when viviting the site the user should be able to host or join a game.
-- when a game is hosted you get a link containing a join code.
-- if you join a game the join code should be used to join the right game.
-- do what you can to overcome common issues with webrtc and p2p discovery, but we cannot make a backend for this app. 
-- make user of freely available resources you find online for images, sound, textures sprites etc.
-- use high quality text to voice engines to make audio for the game, things like round start, round end, kill streaks etc.
-- make high quality animations to make the game visually appealing and professional looking.
-- the game should be fast and smooth, try to keep network communication fast for slower connections.
-- keep track of things like ping on the UI.
-- allow the user to set a name that gets saved in local storage.
-- game maps should exist separate files that can be portable.
+A top-down, free-for-all tank shooter that runs entirely in the browser. One player hosts, shares a link, and up to 8 players (people and bots) fight in 3-minute rounds. There is no game server: the site is static files on GitHub Pages, and players connect to each other directly.
 
-- make sure the sprites, textures and other assets are all similar visually so that the visual theme of the game is consistent.
-- make sure the physics engine adds to the gameplay, the physics does not need to be completely realistic, but should be intuitive.
-- when users leave or become unresponsive due to technical or network issues we should handle that and pick it up early.
-- when you are in a game all users should be able to copy a link have have the invite code visible.
-- also update the join hash in the url so that you can copy and paste from the URL bar. 
+Play it at https://richardyoung.co.za/peertanks/
 
-Vesion handling
-- because of caching it may be possible that 2 players end up on different versions of the game. Build in version numbers into the builds and make it visible on the UI small somewhere.
-- when a player joins it should check its version with the host, if there is a mismatch then an error should be shown. if the joining player is outdated then they should be prevented from joining with an error message explaining how to do a hard refresh, and then try again. If the host is outdated then both the host and joining player should get an error. the joining player should be prevented from joining, the host should get a dismissable warning about being outdated. 
+## The game
 
+- **Drive** with the arrow keys or WASD (up is always up the screen), **aim** with the mouse, **click** to fire.
+- Everyone has a cannon with unlimited ammo. Other weapons appear on the map: machine gun, bouncy cannon, laser, rocket, grenade (hold to throw further) and mortar (flies over walls).
+- **Powerups** last a short time: shield, speed, damage boost, and a dead man's switch that explodes when you die.
+- Water, lava and pits destroy tanks. Explosions push tanks, so a near miss can still knock you in.
+- A kill scores a point. The highest score when the round ends wins.
+- **Bots** come in easy, medium and hard, each with a random play style so they don't all play alike.
+- **Maps:** Meadow (grassland), Frostbite (snow) and Caldera (volcanic).
 
-Powerups
-- weapons and powerups should spawn at predefined spots on the map after a configrable amount of time. The map should be able to specify if the spot randomly chooses from all available weapons/powerups, or randomly chooses from a subset. 
-- powerups are things that temporarily modify the player for a short time, eg
-    - shield: reduced damage taken for 20 seconds
-    - speedup movement for a short time
-    - increased damage for a short time
-    - explode on death, causing splash damage
+## How it works
 
-Configuration
-- there should be a global gameplay config file. This file can be read at compile time, it doesnt need to be dynamic. It should contain all the metrics that can be changed to balance gameplay, such as the speed and damage of each weapon, splash radius and splash damage of each weapon, movement speed, respawn time, any metrics associated with powerups, default round time etc. 
+**Peer-to-peer.** The host's browser runs the game and is the final word on what happens. Other players connect to it over WebRTC, using [PeerJS](https://peerjs.com) only to find each other. Players send their key and mouse input; the host sends back the state of the game 20 times a second in a compact binary format. Your own tank and shots react instantly, and other tanks are smoothed between updates.
 
-AI Bots
-- there should be AI bots that can be added to a round. They can be added either before a round start, or added/removed from the hosts in game menu. Look up some strageties for how these AI bots can function so that they play like human players. Determine some parameters that will influence their skill level and playing style, and allow these to be randomised within certain limits to create different personalities. The host should be able to add easy, medium or hard bots. The bounds for the skill parameters should be changable in the config file so we can tweak it.   
+**Joining.** Hosting creates a 6-character code and a link like `…/peertanks/#join=ABC123`. Opening the link joins that game. Builds are version-checked on join, so a player with an old cached copy is told to refresh.
 
-Game menu
-- The host game menu should allow the host to choose a map, as well as what weapons and powerups are allowed in the map. The list of weapons should filter what spawns on the map.
-- The host can also add bots from this menu.
-- While in this menu the join link should already be available to that people can join, and be visible in the lobby before the game starts, however people can join mid game as well.
-- the host can change the default round length here ass well.
-- once a game has started the host should have a game menu that allows certain game settings to be changed. They should be able to kick people (including bots) and add new bots at varying difficulty levels.
-- the game menu should be different for people who are not the host. It should perhaps just have a leave game button.
+**Connection help.** Most players connect directly. Those who can't (for example on some mobile networks) go through Cloudflare's TURN relay. A small Cloudflare Worker in `workers/turn-credentials` hands out short-lived relay logins so no secret ships in the game. If the Worker can't be reached, the game falls back to a free relay set at build time.
 
-Game score
-- The current game score should be visible in the top corner showing who all is in the round (including bots) and their kill/death ratio and any kill streak. 
+**Code layout** (`src/`):
 
-Credits
-- No third-party assets yet. Assets are chosen to be royalty- and attribution-free; see docs/PLAN.md (Audio and assets).
+| Folder | What's in it |
+|---|---|
+| `sim/` | Game rules and physics (2D, using Rapier). No graphics code, so it runs the same everywhere and in tests |
+| `net/` | Hosting, joining, packets, prediction and smoothing |
+| `bots/` | Bot perception, decisions, pathfinding and aim. Bots send the same input a person would |
+| `render/` | 3D graphics with three.js. Tanks, trees, rocks and effects are built in code |
+| `ui/`, `audio/`, `input/` | Menus and HUD, sound, keyboard and mouse |
+| `app/` | Ties it together for the host and for joining players |
+
+- **Balance numbers** (damage, speeds, ammo, bot skill) all live in `src/gameplay-config.ts`.
+- **Maps** are [Tiled](https://www.mapeditor.org) JSON files in `public/maps`, listed in `public/maps/index.json`. Each map is one self-contained file.
+
+More detail is in [docs/PLAN.md](docs/PLAN.md). Asset sources and licences are in [ASSETS.md](ASSETS.md).
+
+## Running it locally
+
+**You need:** Node.js 20.19+ or 22.12+, npm, a modern browser, and an internet connection (players find each other through the public PeerJS server).
+
+```sh
+npm install
+npm run dev
+```
+
+Open the address Vite prints. To try multiplayer, host in one tab and open the invite link in another. Use `npm run dev -- --host` to join from another device on your network.
+
+In dev builds the host has shortcuts: **F8** ends the round, **F9** gives every weapon, **F10** turns on every powerup.
+
+| Command | Does |
+|---|---|
+| `npm run dev` | Dev server with live reload |
+| `npm test` | Runs the tests (game rules, weapons, packets, maps, bot matches) |
+| `npm run typecheck` | Checks types |
+| `npm run build` | Type-checks and builds to `dist/` |
+| `npm run preview` | Serves the built `dist/` |
+
+### Optional setup
+
+None of this is needed to play locally.
+
+- **Fallback relay:** put `TURN_SERVER`, `TURN_USERNAME` and `TURN_PASSWORD` in a `.env` file to build in the fallback relay. The deploy gets these from GitHub secrets.
+- **Announcer voice:** `npm run voice` records new or changed lines from `tools/voice-lines.json`. Needs [uv](https://docs.astral.sh/uv/), Python 3.10–3.12 and ffmpeg. The speech model downloads on first run.
+- **Sound effects:** `tools/import-sound-effects.sh <folder>` rebuilds `public/audio/effects`. Needs ffmpeg and the unzipped Kenney Sci-Fi and Impact sound packs.
+- **Relay Worker:** `npm run deploy:turn` deploys it with Wrangler. Needs a Cloudflare account, with `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_API_TOKEN` set as Worker secrets.
+
+## Deploying
+
+Every push to `main` runs the tests, builds the game and publishes it to GitHub Pages (`.github/workflows/deploy.yml`).
