@@ -28,11 +28,17 @@ interface TurnRelay {
 /** From TURN_SERVER, TURN_USERNAME and TURN_PASSWORD at build time (.env locally, secrets on deploy); null without them. */
 declare const __TURN_RELAY__: TurnRelay | null;
 
-// STUN finds each player's public address so they can connect directly; that covers most home networks.
-// When that fails (e.g. a phone connection behind the carrier's shared NAT), traffic goes through the TURN relay
-// (ExpressTURN's free plan). Its login ships in the public JavaScript; at worst someone uses up the monthly
-// allowance, and the login can be regenerated from the ExpressTURN dashboard.
-export const ICE_SERVERS: RTCIceServer[] = [
+/**
+ * Hands out short-lived logins for Cloudflare's TURN relay (workers/turn-credentials). Cloudflare relays from the
+ * location nearest each player, so relayed games stay quick. Asked just before hosting or joining.
+ */
+export const RELAY_LOGIN_URL = 'https://peertanks-turn.awesome-friends-recipes.workers.dev';
+
+// Used only if the relay login can't be fetched. STUN finds each player's public address so they can connect
+// directly, which covers most home networks; when that fails (e.g. a phone behind the carrier's shared NAT),
+// traffic goes through ExpressTURN's free relay instead. It's in Amsterdam, so it's slow from far away. Its login
+// ships in the public JavaScript; at worst someone uses up the monthly allowance, and it can be regenerated.
+export const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun.cloudflare.com:3478' },
   ...relayServers(__TURN_RELAY__),

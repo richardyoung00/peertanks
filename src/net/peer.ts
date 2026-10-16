@@ -1,12 +1,11 @@
 import Peer, { PeerErrorType, type PeerError } from 'peerjs';
-import { ICE_SERVERS, NETWORK } from '../config';
+import { NETWORK } from '../config';
+import { fetchIceServers } from './ice-servers';
 
 // No 0/O or 1/I/L, so codes are easy to read out loud.
 const JOIN_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const JOIN_CODE_LENGTH = 6;
 const MAX_HOST_ID_ATTEMPTS = 3;
-
-const peerOptions = { config: { iceServers: ICE_SERVERS }, debug: 1 };
 
 export function generateJoinCode(): string {
   const randomValues = crypto.getRandomValues(new Uint32Array(JOIN_CODE_LENGTH));
@@ -30,8 +29,9 @@ export function readJoinCodeFromUrl(): string | null {
   return match ? normaliseJoinCode(match[1]) : null;
 }
 
-function openPeer(id?: string): Promise<Peer> {
-  const peer = id ? new Peer(id, peerOptions) : new Peer(peerOptions);
+async function openPeer(id?: string): Promise<Peer> {
+  const options = { config: { iceServers: await fetchIceServers() }, debug: 1 };
+  const peer = id ? new Peer(id, options) : new Peer(options);
   return new Promise((resolve, reject) => {
     peer.once('open', () => resolve(peer));
     peer.once('error', (error) => {

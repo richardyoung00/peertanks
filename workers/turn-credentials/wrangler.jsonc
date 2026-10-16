@@ -1,0 +1,8 @@
+// The Worker that hands out TURN relay logins (see src/index.ts).
+// Its secrets, CLOUDFLARE_TURN_KEY_ID and CLOUDFLARE_TURN_API_TOKEN, are set with `wrangler secret put`.
+{
+  "name": "peertanks-turn",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true
+}
