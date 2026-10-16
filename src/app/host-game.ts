@@ -1,6 +1,7 @@
 import { HostSession } from '../net/host-session';
 import { HOST_PLAYER_ID } from '../net/messages';
 import { openHostPeer } from '../net/peer';
+import { weaponAutoSwitch } from '../settings/weapon-auto-switch';
 import { defaultSettings } from '../sim/game-settings';
 import { fetchMapById } from '../sim/map-loader';
 import { showLoading } from '../ui/notice';
@@ -13,6 +14,8 @@ export async function startHostGame(name: string, container: HTMLElement): Promi
   const [{ peer, code }, art] = await Promise.all([openHostPeer(), loadMenuArt()]);
   const session = new HostSession(peer, defaultSettings());
   session.addHostPlayer(HOST_PLAYER_ID, name);
+  session.setAutoSwitch(HOST_PLAYER_ID, weaponAutoSwitch.get());
+  weaponAutoSwitch.onChange((on) => session.setAutoSwitch(HOST_PLAYER_ID, on));
 
   const settings = await runHostLobby(session, code, HOST_PLAYER_ID, art, defaultSettings());
   showLoading(true, 'Starting game…');

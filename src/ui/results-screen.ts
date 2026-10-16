@@ -1,4 +1,4 @@
-import type { PlayerScore } from '../sim/scores';
+import { roundOutcome, type PlayerScore } from '../sim/scores';
 import { element } from './dom';
 import { playerNameElement, type PlayerLookup } from './player-lookup';
 import { killDeathRatio } from './scoreboard';
@@ -31,11 +31,10 @@ export class ResultsScreen {
   }
 
   private title(standings: PlayerScore[]): (string | HTMLElement)[] {
-    const [first, second] = standings;
-    if (!first || first.kills === 0) return ['Nobody scored!'];
-    const tied = second && second.kills === first.kills && second.deaths === first.deaths;
-    if (tied) return ["It's a draw!"];
-    return [playerNameElement(this.players, first.playerId), ' wins!'];
+    const outcome = roundOutcome(standings);
+    if (outcome.kind === 'nobody-scored') return ['Nobody scored!'];
+    if (outcome.kind === 'draw') return ["It's a draw!"];
+    return [playerNameElement(this.players, outcome.playerId), ' wins!'];
   }
 
   private row(score: PlayerScore): HTMLTableRowElement {

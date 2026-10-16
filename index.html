@@ -44,10 +44,7 @@
         <input id="menu-code" placeholder="Join code" maxlength="6" autocomplete="off" spellcheck="false" />
         <button id="menu-join" type="submit" class="chunky">Join</button>
       </div>
-      <div class="field graphics-field">
-        <span>Graphics</span>
-        <div id="menu-graphics" class="pill-row"></div>
-      </div>
+      <button id="menu-settings" type="button" class="chunky small menu-settings">Settings</button>
     </form>
 
     <div id="lobby" class="screen" hidden>
@@ -71,6 +68,7 @@
         </div>
         <footer class="slab-footer">
           <div id="lobby-controls" class="controls-guide"></div>
+          <button id="lobby-player-settings" type="button" class="chunky">Settings</button>
           <button id="lobby-leave" type="button" class="chunky">Leave</button>
           <button id="lobby-start" type="button" class="chunky go">Start game</button>
         </footer>
@@ -82,10 +80,7 @@
         <header class="slab-header">
           <h2>Menu</h2>
           <span class="slab-status">The game keeps going while this is open. Esc to close.</span>
-          <div class="graphics-chip">
-            <span>Graphics</span>
-            <div id="game-menu-graphics" class="pill-row"></div>
-          </div>
+          <button id="game-menu-player-settings" type="button" class="chunky small header-action">Settings</button>
         </header>
         <div class="slab-body">
           <section class="squad">
@@ -103,6 +98,32 @@
           <button id="game-menu-leave" type="button" class="chunky danger">Leave game</button>
           <button id="game-menu-end" type="button" class="chunky danger">End game</button>
           <button id="game-menu-close" type="button" class="chunky go">Back to game</button>
+        </footer>
+      </div>
+    </div>
+
+    <div id="player-settings" class="screen" hidden>
+      <div class="slab slab-narrow">
+        <header class="slab-header">
+          <h2>Settings</h2>
+        </header>
+        <section class="player-settings-section">
+          <h3>Graphics</h3>
+          <div id="player-settings-graphics" class="pill-row"></div>
+        </section>
+        <section class="player-settings-section">
+          <h3>Audio</h3>
+          <div id="player-settings-audio" class="volume-list"></div>
+        </section>
+        <section class="player-settings-section">
+          <h3>Gameplay</h3>
+          <div class="setting-row">
+            <span>Switch to new weapons when picked up</span>
+            <div id="player-settings-auto-switch" class="pill-row"></div>
+          </div>
+        </section>
+        <footer class="slab-footer">
+          <button id="player-settings-done" type="button" class="chunky go">Done</button>
         </footer>
       </div>
     </div>

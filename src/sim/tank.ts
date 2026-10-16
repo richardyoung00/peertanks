@@ -30,6 +30,8 @@ export interface Tank {
   /** Seconds of reduced steering left after being knocked back by an explosion. */
   knockbackTimer: number;
   loadout: Loadout;
+  /** The player's choice: whether picking up a new weapon switches to it. */
+  autoSwitchWeapons: boolean;
 }
 
 /** Kinematic tanks are moved directly rather than by physics; clients use them for other players' tanks. */
@@ -70,6 +72,7 @@ export function createTank(
     lastAttackedTimer: 0,
     knockbackTimer: 0,
     loadout: emptyLoadout(),
+    autoSwitchWeapons: true,
   };
 }
 

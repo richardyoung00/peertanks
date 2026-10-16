@@ -53,3 +53,14 @@ export class Scoreboard {
 export function sortStandings(scores: PlayerScore[]): PlayerScore[] {
   return [...scores].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
 }
+
+export type RoundOutcome = { kind: 'nobody-scored' } | { kind: 'draw' } | { kind: 'won'; playerId: string };
+
+/** Who won, from standings already in order. Level on kills and deaths at the top is a draw. */
+export function roundOutcome(standings: PlayerScore[]): RoundOutcome {
+  const [first, second] = standings;
+  if (!first || first.kills === 0) return { kind: 'nobody-scored' };
+  const tied = second && second.kills === first.kills && second.deaths === first.deaths;
+  if (tied) return { kind: 'draw' };
+  return { kind: 'won', playerId: first.playerId };
+}

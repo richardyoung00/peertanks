@@ -9,6 +9,7 @@ import { makeCopyLinkButton } from './copy-link';
 import { element } from './dom';
 import { showLoading } from './notice';
 import { renderPlayerList } from './player-list';
+import { openPlayerSettings } from './player-settings-panel';
 import { renderSettingsForm } from './settings-form';
 
 export interface LobbyOptions {
@@ -34,6 +35,7 @@ export class LobbyScreen {
     element('lobby-code').textContent = options.code;
     makeCopyLinkButton(element<HTMLButtonElement>('lobby-copy'), options.link);
     element('lobby-leave').onclick = options.onLeave;
+    element('lobby-player-settings').onclick = openPlayerSettings;
     renderControlsGuide(element('lobby-controls'));
 
     const start = element<HTMLButtonElement>('lobby-start');

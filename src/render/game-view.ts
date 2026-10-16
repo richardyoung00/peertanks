@@ -109,6 +109,11 @@ export class GameView {
     return this.followCamera.groundPointAt(ndcX, ndcY);
   }
 
+  /** Where the camera is looking, in map coordinates. Sounds are heard from here. */
+  get cameraFocus(): { x: number; y: number } {
+    return { x: this.followCamera.focusX, y: this.followCamera.focusZ };
+  }
+
   snapCamera(x: number, y: number): void {
     this.followCamera.snapTo(x, y);
   }

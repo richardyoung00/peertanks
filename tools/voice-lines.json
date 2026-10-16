@@ -1,0 +1,11 @@
+{
+  "voice": "am_michael",
+  "speed": 0.95,
+  "pitch": 0.82,
+  "lines": {
+    "roundStart": ["Round start!"],
+    "finalSeconds": ["Thirty seconds left!"],
+    "roundOver": ["Round over!"],
+    "youWin": ["You win!"]
+  }
+}

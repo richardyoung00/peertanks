@@ -56,6 +56,8 @@ export class HostSession {
   private mapId = '';
   private sentScoresVersion = -1;
   private nextBotNumber = 1;
+  /** Players who turned off switching to new weapons. Kept here so it carries over to each new map. */
+  private readonly autoSwitchOff = new Set<string>();
   private readonly stallGuard = new StallGuard(SILENCE_CHECK_INTERVAL_MS);
 
   constructor(
@@ -92,8 +94,16 @@ export class HostSession {
     this.world = world;
     this.mapId = mapId;
     this.sentScoresVersion = -1;
-    for (const player of this.roster.all) world.addTank(player.id, player.name, player.color);
+    for (const player of this.roster.all) this.addTank(world, player);
     for (const player of this.remotePlayers.values()) this.sendWelcome(player);
+  }
+
+  /** Whether picking up a new weapon switches this player to it. Bots always switch. */
+  setAutoSwitch(id: string, on: boolean): void {
+    if (on) this.autoSwitchOff.delete(id);
+    else this.autoSwitchOff.add(id);
+    const tank = this.world?.tanks.get(id);
+    if (tank) tank.autoSwitchWeapons = on;
   }
 
   /** Tells everyone in the game about new settings (they apply from the next round). */
@@ -177,7 +187,7 @@ export class HostSession {
   /** Puts a newly added player into the running game (or the lobby) and tells everyone else. */
   private welcomeToRoster(info: PlayerInfo): void {
     if (this.world) {
-      this.world.addTank(info.id, info.name, info.color);
+      this.addTank(this.world, info);
       const remote = this.remotePlayers.get(info.id);
       if (remote) this.sendWelcome(remote);
       this.broadcast({ type: 'playerJoined', player: info }, info.id);
@@ -186,6 +196,11 @@ export class HostSession {
     }
     this.listener.onPlayersChanged?.(this.roster.all);
     this.listener.onPlayerJoined?.(info);
+  }
+
+  private addTank(world: GameWorld, player: PlayerInfo): void {
+    const tank = world.addTank(player.id, player.name, player.color);
+    tank.autoSwitchWeapons = !this.autoSwitchOff.has(player.id);
   }
 
   private sendWelcome(player: RemotePlayer): void {
@@ -229,7 +244,9 @@ export class HostSession {
 
     player.connection.on('data', (data) => {
       player.lastHeardAt = performance.now();
-      if (isClientMessage(data) && data.type === 'ping') this.send(player.connection, { type: 'pong', sentAt: data.sentAt });
+      if (!isClientMessage(data)) return;
+      if (data.type === 'ping') this.send(player.connection, { type: 'pong', sentAt: data.sentAt });
+      if (data.type === 'preferences') this.setAutoSwitch(player.info.id, data.autoSwitchWeapons === true);
     });
 
     player.connection.on('close', () => this.removePlayer(player.info.id, 'connection closed'));
@@ -262,6 +279,7 @@ export class HostSession {
     if (!info) return;
     console.info(`${info.name} left (${reason})`);
     this.roster.remove(id);
+    this.autoSwitchOff.delete(id);
     if (this.world) {
       this.world.removeTank(id);
       this.broadcast({ type: 'playerLeft', playerId: id });

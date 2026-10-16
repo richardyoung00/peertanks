@@ -88,6 +88,10 @@ export class ClientSession {
     this.fastChannel = channel;
   }
 
+  sendPreferences(autoSwitchWeapons: boolean): void {
+    this.send({ type: 'preferences', autoSwitchWeapons });
+  }
+
   sendInputs(frames: InputFrame[]): void {
     if (this.fastChannel) sendIfOpen(this.fastChannel, encodeInputPacket(frames));
   }

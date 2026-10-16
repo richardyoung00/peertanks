@@ -78,7 +78,7 @@ export class PickupField {
 }
 
 function giveItem(tank: Tank, item: ItemId): void {
-  if (isPickupWeapon(item)) addWeapon(tank.loadout, item);
+  if (isPickupWeapon(item)) addWeapon(tank.loadout, item, tank.autoSwitchWeapons);
   else activatePowerup(tank.loadout, item);
 }
 

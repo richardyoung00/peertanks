@@ -1,0 +1,22 @@
+{
+  "lines": {
+    "roundStart": [
+      "round-start-1.mp3"
+    ],
+    "finalSeconds": [
+      "final-seconds-1.mp3"
+    ],
+    "roundOver": [
+      "round-over-1.mp3"
+    ],
+    "youWin": [
+      "you-win-1.mp3"
+    ]
+  },
+  "recorded": {
+    "round-start-1.mp3": "f32edcf7ff2e5ce7",
+    "final-seconds-1.mp3": "56ebf65402ee9e96",
+    "round-over-1.mp3": "8b04d83090f6cc91",
+    "you-win-1.mp3": "8eb79559576d9845"
+  }
+}

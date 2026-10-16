@@ -46,12 +46,12 @@ export function nextOwnedWeapon(loadout: Loadout, direction: 1 | -1): WeaponId {
   return owned[(index + direction + owned.length) % owned.length];
 }
 
-/** Picking up a weapon tops up its ammo, and switches to it only if it's new. */
-export function addWeapon(loadout: Loadout, weapon: PickupWeaponId): void {
+/** Picking up a weapon tops up its ammo, and switches to it only if it's new (and the player wants that). */
+export function addWeapon(loadout: Loadout, weapon: PickupWeaponId, switchIfNew = true): void {
   const isNew = loadout.ammo[weapon] === 0;
   const perPickup = GAMEPLAY.weapons[weapon].ammoPerPickup;
   loadout.ammo[weapon] = Math.min(loadout.ammo[weapon] + perPickup, perPickup * GAMEPLAY.pickups.maxAmmoPickups);
-  if (isNew) selectWeapon(loadout, weapon);
+  if (isNew && switchIfNew) selectWeapon(loadout, weapon);
 }
 
 /** Uses one shot of the selected weapon, falling back to the best remaining weapon when it runs dry. */

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GAMEPLAY } from '../src/gameplay-config';
 import { defaultSettings } from '../src/sim/game-settings';
 import { GameWorld } from '../src/sim/game-world';
-import { activatePowerup, addWeapon } from '../src/sim/loadout';
+import { activatePowerup, addWeapon, ownedWeapons } from '../src/sim/loadout';
 import { teleportTank } from '../src/sim/tank';
 import { ARENA, findEvent, setupWorld, ticks } from './helpers/sim-world';
 
@@ -29,6 +29,19 @@ describe('pickups and switching', () => {
       world.step(new Map());
     }
     expect(spot.item).not.toBeNull();
+  });
+
+  it('keeps the current weapon when the player turned auto-switch off', () => {
+    const world = new GameWorld(ARENA, defaultSettings());
+    const spot = world.pickups.spots[0];
+    const tank = world.addTank('a', 'a', 1);
+    tank.autoSwitchWeapons = false;
+    teleportTank(tank, spot);
+    const item = spot.item;
+
+    world.step(new Map());
+    expect(tank.loadout.selected).toBe('cannon');
+    expect(ownedWeapons(tank.loadout)).toContain(item);
   });
 
   it('tops up ammo to the cap, switches only to owned weapons and falls back when dry', () => {

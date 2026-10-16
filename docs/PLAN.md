@@ -238,9 +238,10 @@ Bots get tank-themed names and colours like players, show a small level-coloured
 - **Player settings** (each player's own, unlike the host's game settings). There will be more of these over time, so they get their own space instead of being squeezed into other screens:
   - a *Settings* button on the main menu and in the Esc menu (for everyone) opens one settings panel, in the same slab style, grouped into sections (e.g. Graphics, Audio, Controls)
   - everything is saved in `localStorage` and applies straight away
-  - **Graphics:** High / Low (built; it now sits in the main menu and the Esc menu header, and moves into the panel)
-  - **Audio:** master, sound effects and announcer volume (with milestone 8)
-  - **Auto-switch weapons:** whether picking up a new weapon switches to it (now it always does). The switch happens on the host, so the client has to tell the host its choice: a small message after joining, never a change to `JoinMetadata`, which must keep its shape for the version check
+  - built: the panel also opens from the lobby footer, and Esc closes it before the menu underneath
+  - **Graphics:** High / Low
+  - **Audio:** master, effects, announcer and menu volumes; letting go of a slider plays a sample at the new level
+  - **Auto-switch weapons:** whether picking up a new weapon switches to it (on by default). The switch happens on the host, so the client sends a `preferences` message once it's in, and on every change, never a change to `JoinMetadata`, which must keep its shape for the version check
   - room for later ones, e.g. key bindings or camera shake
 - **Controls guide** (keycaps for drive, aim, fire, charge, weapons, menu) in the lobby and the in-game menu. It isn't shown on screen during play, so the weapon bar sits at the bottom edge.
 - **Thumbnails** are rendered from the game's own 3D models when menus first load, so they always match the current look and need no image files.
@@ -298,10 +299,11 @@ Each asset's source and licence is recorded in an `ASSETS.md` file, so it's easy
 
 ### Sound effects and announcer
 
-- **Sound effects:** CC0 sounds, played through the Web Audio API, with volume set by distance from your tank.
+- **Sound effects:** CC0 sounds from Freesound and Kenney (picked by ear; list in `ASSETS.md`), played through the Web Audio API, with volume and left/right pan set by distance from the camera's focus. The first set is kept small: shots (cannon, machine gun, laser, a launch sound for rocket and mortar, a whoosh for the grenade), shell hits on walls and tanks, being hit yourself, explosions, tanks destroyed or sinking (water splash, lava hiss), your own weapon and powerup pickups, and a whistle as a mortar comes down. No music.
+- **Menu sounds:** made in code: a click for buttons and a blip when an option changes.
 - **Announcer:**
-  - The lines include round start, final 30 seconds, round over, first blood, double kill, killing spree and you win, plus fun voice prompts when someone is killed. There are several variants per event, so they don't get repetitive. The script lives in `tools/voice-lines.json`.
-  - `npm run voice` generates any new or changed lines with a local text-to-speech model. **Kokoro** (Apache-2.0) is the first candidate, with voice licences checked before use.
+  - Built so far: one short line each for round start, final 30 seconds, round over and you win. Still to add if wanted: first blood, double kill, killing spree and fun prompts when someone is killed. The script lives in `tools/voice-lines.json`.
+  - `npm run voice` generates any new or changed lines with **Kokoro** (Apache-2.0, run locally through kokoro-onnx). The voice is `am_michael`, slowed a little, pitched down and given a stadium echo; `ASSETS.md` has the details so new lines match.
   - If local voices aren't good enough for a fun announcer, I'll ask before switching to ElevenLabs. The API key in `.env` stays unused until then, and if used it would never go into the game.
 - Volume sliders, saved in `localStorage`.
 
@@ -345,7 +347,7 @@ Each milestone ends with something playable to check.
    - rounded shorelines and banks, softer hazard edges
    - explosions, trails and death animations
    - bloom and the low-graphics option
-8. **Audio and player settings:**
+8. ✅ **Audio and player settings:**
    - sound effects, announcer
    - the player settings panel (graphics, audio volumes, auto-switch weapons)
 9. **More maps and themes:**

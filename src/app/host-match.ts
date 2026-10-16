@@ -1,3 +1,4 @@
+import { MatchAudio } from '../audio/match-audio';
 import { BotSquad } from '../bots/bot-squad';
 import { SIM_DT } from '../config';
 import { startGameLoop } from '../game-loop';
@@ -39,6 +40,7 @@ export class HostMatch {
   private readonly hud: GameHud;
   private readonly menu: GameMenu;
   private readonly bots: BotSquad;
+  private readonly audio = new MatchAudio(HOST_PLAYER_ID);
 
   constructor(
     private readonly session: HostSession,
@@ -85,6 +87,7 @@ export class HostMatch {
     const events = this.world.step(inputs);
     this.bots.observe(events, this.world);
     this.view.handleEvents(events);
+    this.audio.handleEvents(events, this.view.cameraFocus);
     this.hud.handleEvents(events, nowSeconds());
     this.reactToEvents(events);
     this.session.broadcastTick(events);
@@ -95,6 +98,7 @@ export class HostMatch {
     const aimPoint = this.controls.aimPoint(this.view);
     const target = tank?.alive ? landingTarget(tank, tank.loadout, aimPoint) : null;
     this.view.render(viewStateFromWorld(this.world, alpha, HOST_PLAYER_ID), frameDt, aimPoint, target);
+    this.audio.update(this.world.round, this.world.currentSettings.roundSeconds);
     if (tank) {
       const nextMap = this.rotation.nextName(this.world.currentSettings);
       this.hud.update(this.world.round, this.world.scores.all, tank.loadout, nextMap, nowSeconds());

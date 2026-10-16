@@ -6,8 +6,8 @@ import type { GameSettings } from '../sim/game-settings';
 import { renderAddBotButtons } from './add-bot-buttons';
 import { renderControlsGuide } from './controls-guide';
 import { element } from './dom';
-import { renderGraphicsToggle } from './graphics-toggle';
 import { renderPlayerList } from './player-list';
+import { openPlayerSettings } from './player-settings-panel';
 import { renderSettingsForm } from './settings-form';
 
 export interface HostMenuControls {
@@ -40,6 +40,7 @@ export class GameMenu {
       ? 'Changes apply from the next round.'
       : 'Only the host can change these.';
     element('game-menu-close').onclick = () => this.close();
+    element('game-menu-player-settings').onclick = openPlayerSettings;
     element('game-menu-leave').onclick = options.onLeave;
     element('game-menu-end').onclick = () => options.host?.onEndGame();
     renderControlsGuide(element('game-menu-controls'));
@@ -74,7 +75,6 @@ export class GameMenu {
   }
 
   private render(): void {
-    renderGraphicsToggle(element('game-menu-graphics'));
     const host = this.options.host;
     renderPlayerList(element('game-menu-players'), this.players, {
       localId: this.options.localId,

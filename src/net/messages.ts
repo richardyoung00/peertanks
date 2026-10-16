@@ -53,7 +53,10 @@ export type HostMessage =
   | { type: 'scores'; scores: PlayerScore[] }
   | { type: 'pong'; sentAt: number };
 
-export type ClientMessage = { type: 'ping'; sentAt: number };
+export type ClientMessage =
+  | { type: 'ping'; sentAt: number }
+  /** The player's own choices the host needs to know. Sent once the host has let us in, and on every change. */
+  | { type: 'preferences'; autoSwitchWeapons: boolean };
 
 function hasMessageType(value: unknown): value is { type: string } {
   return typeof value === 'object' && value !== null && typeof (value as { type: unknown }).type === 'string';

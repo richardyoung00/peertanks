@@ -1,3 +1,4 @@
+import { MatchAudio } from '../audio/match-audio';
 import { GAMEPLAY } from '../gameplay-config';
 import { startGameLoop } from '../game-loop';
 import type { ClientSession, ClientSessionListener, WelcomeMessage } from '../net/client-session';
@@ -6,6 +7,7 @@ import { HOST_PLAYER_ID } from '../net/messages';
 import { joinLink } from '../net/peer';
 import { GameView } from '../render/game-view';
 import { nextMapId } from '../sim/game-settings';
+import type { WeaponId } from '../sim/items';
 import { GameMenu } from '../ui/game-menu';
 import { showHud, showInvitePanel, updateStatusPanel } from '../ui/hud';
 import { showNotice } from '../ui/notice';
@@ -30,6 +32,7 @@ export class ClientMatch {
   private readonly controls: LocalControls;
   private readonly hud: GameHud;
   private readonly menu: GameMenu;
+  private readonly audio: MatchAudio;
   private pingMs: number | null = null;
 
   constructor(
@@ -43,6 +46,7 @@ export class ClientMatch {
     this.view = new GameView(container, welcome.map);
     this.controls = new LocalControls(container);
     this.hud = new GameHud(this.playerLookup(), welcome.playerId);
+    this.audio = new MatchAudio(welcome.playerId);
     this.menu = new GameMenu({ localId: welcome.playerId, hostId: HOST_PLAYER_ID, art, onLeave: returnToMenu });
     this.refreshStatus();
 
@@ -63,9 +67,12 @@ export class ClientMatch {
     state.updatePredictionObstacles(nowSeconds());
     const { fired, impacts } = state.prediction.step(this.controls.read(this.view, state.prediction.tank));
     this.session.sendInputs(state.prediction.recentFrames());
-    if (fired) this.showPredictedShot();
+    if (fired) this.showPredictedShot(fired);
     const ownerId = state.ownPlayer.id;
-    if (impacts.length > 0) this.view.handleEvents(impacts.map(({ x, y }) => ({ type: 'shellHit', x, y, ownerId })));
+    if (impacts.length > 0) {
+      this.view.handleEvents(impacts.map(({ x, y }) => ({ type: 'shellHit', x, y, ownerId })));
+      this.audio.playOwnWallHits(impacts, this.view.cameraFocus);
+    }
   }
 
   private render(alpha: number, frameDt: number): void {
@@ -73,6 +80,7 @@ export class ClientMatch {
     const now = nowSeconds();
     const events = state.takeDueEvents(now);
     this.view.handleEvents(events);
+    this.audio.handleEvents(events, this.view.cameraFocus);
     this.hud.handleEvents(events, now);
     state.prediction.decayCorrection(frameDt);
 
@@ -81,6 +89,7 @@ export class ClientMatch {
     const ownTank = viewState.tanks.find((tank) => tank.id === state.ownPlayer.id);
     const target = ownTank?.alive ? landingTarget(ownTank, state.prediction.tank.loadout, aimPoint) : null;
     this.view.render(viewState, frameDt, aimPoint, target);
+    this.audio.update(state.round, state.settings.roundSeconds);
     this.hud.update(state.round, state.scores, state.prediction.tank.loadout, this.nextMapName(), now);
   }
 
@@ -149,12 +158,13 @@ export class ClientMatch {
     return this.art.maps.find((map) => map.id === id)?.name ?? id;
   }
 
-  /** Our shots get instant recoil and flash; the host still decides where the shell actually goes. */
-  private showPredictedShot(): void {
+  /** Our shots get instant recoil, flash and sound; the host still decides where the shell actually goes. */
+  private showPredictedShot(weapon: WeaponId): void {
     const { x, y, aimAngle } = this.state.prediction.pose(1);
     const muzzleX = x + Math.cos(aimAngle) * GAMEPLAY.tank.barrelLength;
     const muzzleY = y + Math.sin(aimAngle) * GAMEPLAY.tank.barrelLength;
     this.view.showShot(this.state.ownPlayer.id, muzzleX, muzzleY, aimAngle);
+    this.audio.playOwnShot(weapon);
   }
 
   private playerLookup(): PlayerLookup {

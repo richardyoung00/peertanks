@@ -6,6 +6,10 @@ import './styles/menus.css';
 import { startClientGame } from './app/client-game';
 import { startHostGame } from './app/host-game';
 import { returnToMenu } from './app/navigation';
+import { loadAnnouncerLines } from './audio/announcer-lines';
+import { unlockAudioOnFirstGesture } from './audio/audio-engine';
+import { enableMenuSounds } from './audio/menu-sounds';
+import { loadSoundEffects } from './audio/sound-effects';
 import { describeBuild } from './build-info';
 import { describeConnectionError, normaliseJoinCode, readJoinCodeFromUrl } from './net/peer';
 import { initPhysics } from './sim/physics';
@@ -15,6 +19,11 @@ import { showLoading, showNotice } from './ui/notice';
 
 async function main(): Promise<void> {
   element('build-version').textContent = describeBuild();
+  enableMenuSounds();
+  unlockAudioOnFirstGesture(() => {
+    void loadSoundEffects();
+    void loadAnnouncerLines();
+  });
   await initPhysics();
   showLoading(false);
 
